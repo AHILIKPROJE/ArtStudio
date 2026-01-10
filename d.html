@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Neon Sürüş | Nadir Güçler</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Inter:wght@400;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --arka: #000;
+            --mavi: #00f2ff;
+            --pembe: #ff00ff;
+            --yesil: #00ffaa;
+            --mor: #bf00ff;
+            --tehlike: #ff3333;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; outline: none; }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--arka); font-family: 'Inter', sans-serif; }
+
+        /* --- ARAYÜZ KATMANLARI --- */
+        #giris, #bitis { 
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95); 
+            z-index: 5000; display: flex; align-items: center; justify-content: center; 
+            backdrop-filter: blur(30px);
+        }
+        .panel { 
+            width: 90%; max-width: 440px; background: rgba(10,10,10,0.98); 
+            border: 1px solid rgba(255,255,255,0.05); border-top: 5px solid var(--yesil); 
+            border-radius: 40px; padding: 45px 30px; text-align: center;
+        }
+        .ana-buton { 
+            width: 100%; padding: 22px; border-radius: 20px; border: none; 
+            background: var(--yesil); color: #000; font-family: 'Syncopate'; 
+            font-weight: 900; font-size: 11px; cursor: pointer; margin-top: 20px;
+            box-shadow: 0 10px 30px rgba(0, 255, 170, 0.2);
+        }
+
+        /* --- HUD --- */
+        header { 
+            height: 90px; padding: 0 35px; display: flex; justify-content: space-between; 
+            align-items: center; position: relative; z-index: 100;
+        }
+        .deger { font-family: 'Syncopate'; font-size: 22px; color: var(--mavi); }
+        .etiket { font-size: 9px; color: #444; letter-spacing: 2px; font-weight: 800; }
+
+        #oyun-alani { position: relative; width: 100%; height: calc(100% - 130px); }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* GÜÇ BİLDİRİMİ */
+        #bildirim { 
+            position: absolute; top: 15%; left: 50%; transform: translateX(-50%); 
+            font-family: 'Syncopate'; font-size: 14px; font-weight: 900;
+            opacity: 0; transition: 0.4s; pointer-events: none; text-align: center;
+        }
+
+        footer { height: 40px; background: #050505; display: flex; align-items: center; justify-content: center; font-family: 'Syncopate'; font-size: 8px; color: #222; }
+    </style>
+</head>
+<body>
+
+<div id="giris">
+    <div class="panel">
+        <h2 style="font-family:'Syncopate'; color:var(--yesil);">🌌 NEON SÜRÜŞ: ELITE</h2>
+        <p style="font-size:12px; color:#666; line-height:1.8; margin:20px 0;">
+
+Sektör 07'de hayatta kalmaya hazır mısın?
+
+Karanlık bir boşlukta, üzerine gelen yüksek voltajlı kırmızı engellerden kaç ve en yüksek puanı topla. Unutma; sen hareket edince zaman akar, durunca yavaşlar. Bu avantajı kullanarak ölümcül dar geçitlerden sıyrıl!
+
+🚀 Nadir Süper Güçler:
+
+🛡️ KALKAN: Seni bir çarpışmadan korur.
+
+🚀 HİPER HIZ: Engelleri parçalayarak geçer.
+
+🧲 MIKNATIS: Puanları üzerine çeker.
+
+🎮 Kontroller:
+
+PC: A-D veya Yön Tuşları.
+
+Mobil: Parmağını kaydır.<br><br>
+            <b>[A-D]</b> veya <b>[SOL-SAĞ]</b> tuşları ile kontrol et.
+        </p>
+        <button class="ana-buton" id="baslat">BAĞLANTIYI KUR</button>
+    </div>
+</div>
+
+<header>
+    <div><div class="etiket">MEVCUT VERİ</div><div id="puan-ui" class="deger">000</div></div>
+    <button onclick="location.href='index.html'" style="background:none; border:none; color:#333; font-family:'Syncopate'; font-size:10px; cursor:pointer;">AYRIL</button>
+    <div style="text-align:right;"><div class="etiket">EN YÜKSEK</div><div id="rekor-ui" class="deger" style="color:var(--pembe);">000</div></div>
+</header>
+
+<div id="oyun-alani">
+    <div id="bildirim"></div>
+    <canvas id="canvas"></canvas>
+</div>
+
+<footer>SOVEREIGN ELITE ENGINE // SEKTÖR 07</footer>
+
+<div id="bitis" style="display:none;">
+    <div class="panel">
+        <h2 style="font-family:'Syncopate'; color:var(--tehlike);">SİSTEM KRİTİK</h2>
+        <div style="margin:25px 0;">
+            <div id="son-puan" style="font-size:45px; font-weight:900; color:var(--mavi); font-family:'Syncopate';">0</div>
+            <div class="etiket" style="margin-top:5px;">PUAN TOPLANDI</div>
+        </div>
+        <button class="ana-buton" onclick="location.reload()">SİSTEMİ SIFIRLA</button>
+        <button class="ana-buton" style="background:none; color:#444;" onclick="location.href='index.html'">ANA MENÜ</button>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const ANAHTAR = 'neon_elite_v1';
+    
+    let g, y, gemi, engeller = [], gucler = [], partikuller = [];
+    let puan = 0, aktif = false, rekor = localStorage.getItem(ANAHTAR) || 0;
+    let tus = { sol: false, sag: false };
+
+    const ses = new (window.AudioContext || window.webkitAudioContext)();
+    function bip(f, t, d, v) {
+        if(ses.state === 'suspended') ses.resume();
+        const o = ses.createOscillator(); const g = ses.createGain();
+        o.type = t; o.frequency.value = f; g.gain.value = v;
+        g.gain.exponentialRampToValueAtTime(0.00001, ses.currentTime + d);
+        o.connect(g); g.connect(ses.destination); o.start(); o.stop(ses.currentTime + d);
+    }
+
+    function yukle() {
+        g = canvas.width = window.innerWidth;
+        y = canvas.height = window.innerHeight - 130;
+        gemi = { x: g/2, y: y-100, v: 0, kalkan: false, turbo: false, miknatis: false };
+        document.getElementById('rekor-ui').innerText = rekor.toString().padStart(3, '0');
+    }
+    window.addEventListener('resize', yukle); yukle();
+
+    window.addEventListener('keydown', e => { 
+        if(e.key === 'ArrowLeft' || e.key === 'a') tus.sol = true;
+        if(e.key === 'ArrowRight' || e.key === 'd') tus.sag = true;
+    });
+    window.addEventListener('keyup', e => { 
+        if(e.key === 'ArrowLeft' || e.key === 'a') tus.sol = false;
+        if(e.key === 'ArrowRight' || e.key === 'd') tus.sag = false;
+    });
+
+    // Dokunmatik
+    canvas.addEventListener('touchstart', e => { gemi.hedefX = e.touches[0].clientX; });
+    canvas.addEventListener('touchmove', e => { gemi.hedefX = e.touches[0].clientX; });
+
+    document.getElementById('baslat').onclick = () => {
+        document.getElementById('giris').style.display = 'none';
+        aktif = true; dongu();
+    };
+
+    function uret() {
+        // Engel üretimi (Sabit hızda artan zorluk)
+        if(Math.random() < 0.04 + (puan/10000)) {
+            engeller.push({ x: Math.random()*g, y: -100, w: 80+Math.random()*100, h: 35, hiz: 5+(puan/1500) });
+        }
+        // SÜPER GÜÇ ÜRETİMİ (ÇOK NADİR: %0.5 Şans)
+        if(Math.random() < 0.005) { 
+            const tipler = ['🛡️', '🚀', '🧲'];
+            const tip = tipler[Math.floor(Math.random()*tipler.length)];
+            gucler.push({ x: Math.random()*g, y: -50, simge: tip, hiz: 3 });
+        }
+    }
+
+    function dongu() {
+        if(!aktif) return;
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(0, 0, g, y);
+        uret();
+
+        // Gemi Hareket
+        if(tus.sol) gemi.v -= 1.3;
+        if(tus.sag) gemi.v += 1.3;
+        if(gemi.hedefX !== undefined) gemi.v += (gemi.hedefX - gemi.x) * 0.04;
+        gemi.v *= 0.88; gemi.x += gemi.v;
+        gemi.x = Math.max(35, Math.min(g-35, gemi.x));
+
+        // Gemi Çizim
+        ctx.save();
+        ctx.translate(gemi.x, gemi.y);
+        ctx.rotate(gemi.v * 0.03);
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = gemi.turbo ? '#00ffaa' : (gemi.kalkan ? '#00f2ff' : '#ff00ff');
+        ctx.strokeStyle = ctx.shadowColor;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, -30); ctx.lineTo(-25, 20); ctx.lineTo(25, 20); ctx.closePath();
+        ctx.stroke();
+        if(gemi.kalkan) { ctx.beginPath(); ctx.arc(0, 0, 45, 0, Math.PI*2); ctx.stroke(); }
+        ctx.restore();
+
+        // Engeller
+        engeller.forEach((e, i) => {
+            e.y += gemi.turbo ? 15 : e.hiz;
+            ctx.shadowBlur = 10; ctx.shadowColor = 'red';
+            ctx.fillStyle = 'rgba(255, 50, 50, 0.4)';
+            ctx.strokeStyle = '#ff3333';
+            ctx.fillRect(e.x - e.w/2, e.y, e.w, e.h);
+            ctx.strokeRect(e.x - e.w/2, e.y, e.w, e.h);
+
+            if(Math.abs(gemi.x - e.x) < e.w/2 + 20 && Math.abs(gemi.y - (e.y + e.h/2)) < 30) {
+                if(gemi.turbo) { 
+                    engeller.splice(i, 1); puan += 100; bip(400, 'square', 0.1, 0.05);
+                } else if(gemi.kalkan) { 
+                    gemi.kalkan = false; engeller.splice(i, 1); bip(200, 'sine', 0.3, 0.1);
+                } else ol();
+            }
+            if(e.y > y) { engeller.splice(i, 1); puan += 5; }
+        });
+
+        // Güçler
+        gucler.forEach((n, i) => {
+            n.y += 3;
+            if(gemi.miknatis) { n.x += (gemi.x - n.x) * 0.1; n.y += (gemi.y - n.y) * 0.1; }
+            
+            ctx.font = "24px Arial";
+            ctx.shadowBlur = 15; ctx.shadowColor = "#fff";
+            ctx.fillText(n.simge, n.x-12, n.y+10);
+
+            if(Math.hypot(gemi.x - n.x, gemi.y - n.y) < 45) {
+                gucAl(n.simge); gucler.splice(i, 1);
+            }
+            if(n.y > y) gucler.splice(i, 1);
+        });
+
+        document.getElementById('puan-ui').innerText = puan.toString().padStart(3, '0');
+        requestAnimationFrame(dongu);
+    }
+
+    function gucAl(simge) {
+        bip(800, 'sine', 0.2, 0.1);
+        const b = document.getElementById('bildirim');
+        b.style.opacity = 1;
+        
+        if(simge === '🛡️') { gemi.kalkan = true; b.innerText = "KALKAN AKTİF!"; b.style.color = "var(--mavi)"; }
+        if(simge === '🚀') { 
+            gemi.turbo = true; b.innerText = "HİPER HIZ!"; b.style.color = "var(--yesil)";
+            setTimeout(() => gemi.turbo = false, 3500); 
+        }
+        if(simge === '🧲') { 
+            gemi.miknatis = true; b.innerText = "MIKNATIS AKTİF!"; b.style.color = "var(--mor)";
+            setTimeout(() => gemi.miknatis = false, 6000); 
+        }
+        setTimeout(() => b.style.opacity = 0, 1500);
+    }
+
+    function ol() {
+        aktif = false; bip(80, 'sawtooth', 0.6, 0.2);
+        if(puan > rekor) localStorage.setItem(ANAHTAR, puan);
+        document.getElementById('son-puan').innerText = puan;
+        document.getElementById('bitis').style.display = 'flex';
+    }
+</script>
+</body>
+</html>
