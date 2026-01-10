@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Mind Matrix | Sovereign Sonic</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Inter:wght@400;600;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #010101;
+            --accent: #00f2ff;
+            --purple: #7000ff;
+            --surface: rgba(15, 15, 15, 0.98);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; outline: none; }
+        html, body { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; background: var(--bg); color: #fff;
+            font-family: 'Inter', sans-serif; position: fixed;
+        }
+
+        /* --- UI OVERLAYS --- */
+        #overlay, #end-screen {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.98);
+            z-index: 5000; display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(25px);
+        }
+        .briefing-card {
+            width: 85%; max-width: 380px; background: var(--surface);
+            border: 1px solid var(--border); border-top: 3px solid var(--accent);
+            border-radius: 40px; padding: 40px; text-align: center;
+        }
+        .start-btn {
+            width: 100%; padding: 20px; border-radius: 20px; border: none;
+            background: var(--accent); color: #000; font-family: 'Syncopate';
+            font-weight: 900; font-size: 11px; cursor: pointer; margin-top: 25px;
+        }
+
+        /* --- HEADER & EXIT (A.HTML STİLİ) --- */
+        header {
+            height: 80px; padding: 0 25px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .exit-btn {
+            background: none; border: none; color: #444; font-family: 'Syncopate';
+            font-weight: 900; font-size: 11px; cursor: pointer; padding: 10px;
+        }
+        .hud-val { font-size: 14px; font-weight: 900; color: var(--accent); font-family: 'Syncopate'; }
+
+        /* --- GAME BOARD --- */
+        main { height: calc(100% - 80px); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        #grid-container {
+            width: 100%; max-width: min(88vw, 420px); aspect-ratio: 1/1;
+            background: rgba(255,255,255,0.01); border-radius: 20px; padding: 10px;
+            border: 1px solid var(--border);
+        }
+
+        #grid { display: grid; gap: 6px; width: 100%; height: 100%; }
+
+        .cell {
+            background: rgba(255,255,255,0.03); border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            transition: 0.1s;
+        }
+        
+        .cell.core { background: var(--purple); box-shadow: 0 0 15px var(--purple); z-index: 5; }
+        .cell.filled { background: var(--accent); box-shadow: 0 0 10px var(--accent); border: none; }
+        
+        #hint { margin-top: 20px; font-size: 9px; color: #333; font-family: 'Syncopate'; letter-spacing: 2px; }
+    </style>
+</head>
+<body>
+
+    <div id="overlay">
+        <div class="briefing-card">
+            <h2 style="font-family:'Syncopate'; color:var(--accent); font-size:16px;">Akıl Yolu</h2>
+            <p style="font-size:11px; color:#666; margin-top:10px;">Tüm kareleri doldurarak çekirdekleri bağla!</p>
+            <button class="start-btn" onclick="startGame()">SİSTEMİ BAŞLAT</button>
+        </div>
+    </div>
+
+    <header>
+        <div id="lvl-txt" class="hud-val">L-01</div>
+        <button class="exit-btn" onclick="location.href='index.html'">AYRIL</button>
+        <div id="xp-txt" class="hud-val">XP: 0</div>
+    </header>
+
+    <main>
+        <div id="grid-container"><div id="grid"></div></div>
+        <div id="hint">BAŞLANGIÇTAN BİTİŞE SÜRÜKLE</div>
+    </main>
+
+    <div id="end-screen" style="display:none;">
+        <div class="briefing-card">
+            <h2 style="color:var(--accent)">BAĞLANTI TAMAM</h2>
+            <div id="summary" style="margin:20px 0; font-size:12px; font-weight:800;"></div>
+            <button class="start-btn" onclick="nextLevel()">SONRAKİ SEVİYE</button>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'nexus_ultimate_v3';
+        let appData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { xp: 0 };
+        
+        let currentLvl = 1, gridSize = 4, isDrawing = false, userPath = [];
+        let startIdx, endIdx;
+
+        // --- SOVEREIGN SES MOTORU ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playTone(freq, type, duration, volume) {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + duration);
+        }
+
+        function startGame() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            document.getElementById('overlay').style.display = 'none';
+            buildLevel();
+        }
+
+        function buildLevel() {
+            gridSize = Math.min(4 + Math.floor((currentLvl - 1) / 2), 9);
+            const grid = document.getElementById('grid');
+            grid.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+            grid.innerHTML = '';
+            
+            for(let i=0; i < gridSize * gridSize; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.onmousedown = () => startDrag(i);
+                cell.onmouseenter = () => moveDrag(i);
+                cell.ontouchstart = (e) => { e.preventDefault(); startDrag(i); };
+                cell.ontouchmove = (e) => {
+                    let t = e.touches[0];
+                    let el = document.elementFromPoint(t.clientX, t.clientY);
+                    if(el && el.classList.contains('cell')) moveDrag(Array.from(el.parentNode.children).indexOf(el));
+                };
+                grid.appendChild(cell);
+            }
+
+            generateSnakePath();
+
+            document.getElementById('lvl-txt').innerText = `L-${currentLvl.toString().padStart(2,'0')}`;
+            document.getElementById('xp-txt').innerText = `XP: ${appData.xp}`;
+        }
+
+        function generateSnakePath() {
+            const cells = document.querySelectorAll('.cell');
+            let path = [0];
+            let current = 0;
+
+            while (path.length < gridSize * gridSize) {
+                let neighbors = getNeighbors(current).filter(n => !path.includes(n));
+                if (neighbors.length === 0) return generateSnakePath();
+                let next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                path.push(next);
+                current = next;
+            }
+
+            startIdx = path[0];
+            endIdx = path[path.length - 1];
+            
+            cells[startIdx].classList.add('core');
+            cells[endIdx].classList.add('core');
+            userPath = [];
+        }
+
+        function getNeighbors(i) {
+            let res = [], r = Math.floor(i/gridSize), c = i%gridSize;
+            if (r > 0) res.push(i - gridSize);
+            if (r < gridSize - 1) res.push(i + gridSize);
+            if (c > 0) res.push(i - 1);
+            if (c < gridSize - 1) res.push(i + 1);
+            return res;
+        }
+
+        function startDrag(i) {
+            if(i !== startIdx) return;
+            isDrawing = true; userPath = [];
+            resetUI();
+            addStep(i);
+            playTone(200, 'square', 0.2, 0.05); // Başlama sesi
+        }
+
+        function moveDrag(i) {
+            if(!isDrawing) return;
+            let last = userPath[userPath.length - 1];
+            if(getNeighbors(last).includes(i) && !userPath.includes(i)) {
+                addStep(i);
+                // Her adımda notanın frekansı artar (ilerleme hissi)
+                let freq = 300 + (userPath.length * 20);
+                playTone(freq, 'sine', 0.1, 0.03);
+                
+                if(i === endIdx) checkWin();
+            }
+        }
+
+        function addStep(i) {
+            userPath.push(i);
+            document.getElementById('grid').children[i].classList.add('filled');
+        }
+
+        function resetUI() {
+            document.querySelectorAll('.cell').forEach(c => c.classList.remove('filled'));
+        }
+
+        function checkWin() {
+            if(userPath.length === gridSize * gridSize) {
+                isDrawing = false;
+                appData.xp += currentLvl * 50;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+                
+                // Kazanma Fanfarı
+                playTone(523, 'square', 0.2, 0.1); // Do
+                setTimeout(() => playTone(659, 'square', 0.2, 0.1), 150); // Mi
+                setTimeout(() => playTone(783, 'square', 0.4, 0.1), 300); // Sol
+
+                document.getElementById('end-screen').style.display = 'flex';
+                document.getElementById('summary').innerText = `SEVİYE ${currentLvl} VERİ AKIŞI TAMAMLANDI.`;
+            }
+        }
+
+        function nextLevel() {
+            currentLvl++;
+            document.getElementById('end-screen').style.display = 'none';
+            buildLevel();
+            playTone(400, 'triangle', 0.3, 0.05);
+        }
+
+        window.onmouseup = () => { 
+            if(!userPath.includes(endIdx) && isDrawing) {
+                playTone(100, 'sawtooth', 0.3, 0.05); // Hata/Sıfırlama sesi
+                resetUI(); 
+            }
+            isDrawing = false; 
+        };
+        window.ontouchend = window.onmouseup;
+    </script>
+</body>
+</html>
