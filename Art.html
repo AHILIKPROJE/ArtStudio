@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Nexus Arcade | Sovereign Edition</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #050505;
+            --surface: rgba(20, 20, 20, 0.6);
+            --accent: #00f2ff;
+            --accent-rgb: 0, 242, 255;
+            --purple: #7000ff;
+            --text: #ffffff;
+            --text-dim: #888;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            
+            /* Dinamik Ölçüler */
+            --grid-cols: 2;
+            --card-aspect: 1 / 1;
+            --container-pad: 20px;
+        }
+
+        body.mode-pc {
+            --grid-cols: 4;
+            --card-aspect: 1.3 / 1;
+            --container-pad: 60px;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        
+        body {
+            margin: 0; padding: 0; background: var(--bg); color: var(--text);
+            font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+
+        /* --- ARKA PLAN SÜSLEMELERİ (Mesh Gradient) --- */
+        .bg-glow {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 10% 10%, rgba(var(--accent-rgb), 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 90%, rgba(112, 0, 255, 0.05) 0%, transparent 40%);
+            z-index: -1; pointer-events: none;
+        }
+
+        /* --- 1. SELECTION & LOADING (SPLASH) --- */
+        #splash {
+            position: fixed; inset: 0; background: #000; z-index: 10000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: 1s cubic-bezier(0.85, 0, 0.15, 1);
+        }
+        .splash-logo {
+            font-family: 'Syncopate', sans-serif; font-size: clamp(24px, 5vw, 40px);
+            color: var(--accent); text-shadow: 0 0 40px rgba(var(--accent-rgb), 0.6);
+            margin-bottom: 50px; letter-spacing: 8px; animation: glowPulse 2s infinite;
+        }
+        .selector-box { display: flex; gap: 25px; opacity: 0; transform: translateY(30px); animation: fadeInUp 0.8s 0.5s forwards; }
+        .btn-device {
+            width: 150px; height: 180px; background: var(--surface); border: 1px solid var(--glass-border);
+            border-radius: 24px; cursor: pointer; transition: 0.4s; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 15px; backdrop-filter: blur(10px);
+        }
+        .btn-device:hover { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.05); transform: translateY(-10px); }
+        .btn-device svg { width: 45px; height: 45px; fill: #444; transition: 0.4s; }
+        .btn-device:hover svg { fill: var(--accent); filter: drop-shadow(0 0 10px var(--accent)); }
+        .btn-device span { font-size: 11px; font-weight: 800; color: #444; letter-spacing: 2px; }
+        .btn-device:hover span { color: white; }
+
+        /* --- 2. HEADER & XP SYSTEM --- */
+        header { padding: calc(env(safe-area-inset-top) + 20px) var(--container-pad) 10px; z-index: 100; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .profile { display: flex; align-items: center; gap: 12px; }
+        .level-badge { 
+            background: var(--accent); color: #000; font-weight: 900; font-size: 12px; 
+            width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
+        }
+        .xp-bar-wrap { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; position: relative; }
+        .xp-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, var(--purple), var(--accent)); transition: 1s ease-out; }
+
+        /* --- 3. TAB NAVIGATION (MAIN CONTENT) --- */
+        main { flex: 1; overflow-y: auto; padding: 20px var(--container-pad) 130px; scroll-behavior: smooth; }
+        .view { display: none; }
+        .view.active { display: block; animation: staggerFade 0.6s ease forwards; }
+
+        /* --- 4. BENTO GRID & 3D CARDS --- */
+        .game-grid { display: grid; grid-template-columns: repeat(var(--grid-cols), 1fr); gap: 18px; }
+        .card {
+            background: var(--surface); border-radius: 30px; aspect-ratio: var(--card-aspect);
+            position: relative; overflow: hidden; border: 1px solid var(--glass-border);
+            display: flex; flex-direction: column; justify-content: flex-end; padding: 20px;
+            text-decoration: none; backdrop-filter: blur(12px);
+            transition: transform 0.1s ease-out, border-color 0.3s;
+            transform-style: preserve-3d;
+        }
+        .card:active { transform: scale(0.95) !important; }
+        .card-glow { position: absolute; inset: 0; background: radial-gradient(circle at var(--x) var(--y), rgba(var(--accent-rgb), 0.15), transparent 50%); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        .card:hover .card-glow { opacity: 1; }
+        .card-icon { font-size: 48px; margin-bottom: auto; transform: translateZ(30px); }
+        .card-info h3 { margin: 0; font-size: 18px; font-weight: 800; transform: translateZ(20px); }
+        .card-info span { font-size: 10px; color: var(--text-dim); font-weight: 700; text-transform: uppercase; }
+
+        /* --- 5. PREMIUM LISTS (STATS & SETTINGS) --- */
+        .glass-panel { background: var(--surface); border-radius: 28px; border: 1px solid var(--glass-border); overflow: hidden; backdrop-filter: blur(20px); }
+        .list-row { padding: 22px 25px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; transition: 0.3s; }
+        .list-row:last-child { border-bottom: none; }
+        .list-row:active { background: rgba(255,255,255,0.03); }
+
+        .toggle { width: 54px; height: 28px; background: #222; border-radius: 20px; position: relative; transition: 0.4s; cursor: pointer; }
+        .toggle::after { content: ''; position: absolute; left: 4px; top: 4px; width: 20px; height: 20px; background: #fff; border-radius: 50%; transition: 0.4s; }
+        .toggle.on { background: var(--accent); box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.4); }
+        .toggle.on::after { left: 30px; }
+
+        /* --- 6. FLOATING DOCK (BOTTOM NAV) --- */
+        nav {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: calc(100% - 40px); max-width: 480px; height: 80px;
+            background: rgba(10, 10, 10, 0.7); backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border); border-radius: 35px;
+            display: flex; justify-content: space-around; align-items: center; z-index: 1000;
+        }
+        .nav-link { border: none; background: none; color: #555; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: 0.3s; cursor: pointer; }
+        .nav-link.active { color: var(--accent); transform: translateY(-5px); }
+        .nav-link svg { width: 26px; height: 26px; fill: currentColor; transition: 0.3s; }
+        .nav-link.active svg { filter: drop-shadow(0 0 8px var(--accent)); }
+        .nav-link label { font-size: 10px; font-weight: 800; text-transform: uppercase; }
+
+        /* --- 7. ANIMATIONS --- */
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+        @keyframes glowPulse { 0%, 100% { opacity: 0.8; } 50% { opacity: 1; filter: brightness(1.2); } }
+        @keyframes staggerFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    </style>
+</head>
+<body class="mode-mobile">
+
+    <div class="bg-glow"></div>
+
+    <div id="splash">
+        <div class="splash-logo">NEXUS ARCADE</div>
+        <div class="selector-box">
+            <div class="btn-device" onclick="startEngine('mobile')">
+                <svg viewBox="0 0 24 24"><path d="M17,19H7V5H17M17,1H7C5.89,1 5,1.89 5,3V21C5,22.1 5.9,23 7,23H17C18.1,23 19,22.1 19,21V3C19,1.89 18.1,1 17,1Z"/></svg>
+                <span>MOBİL</span>
+            </div>
+            <div class="btn-device" onclick="startEngine('pc')">
+                <svg viewBox="0 0 24 24"><path d="M21,14H3V4H21M21,2H3C1.89,2 1,2.89 1,4V16C1,17.1 1.9,18 3,18H10L8,21V22H16V21L14,18H21C22.1,18 23,17.1 23,16V4C23,2.89 22.1,2 21,2Z"/></svg>
+                <span>MASAÜSTÜ</span>
+            </div>
+        </div>
+    </div>
+
+    <header>
+        <div class="header-top">
+            <div class="profile">
+                <div class="level-badge" id="lvl-display">1</div>
+                <div>
+                    <div style="font-size: 10px; color: var(--accent); letter-spacing: 2px; font-weight: 800;">PLAYER_ONE</div>
+                    <div style="font-size: 16px; font-weight: 800;" id="view-title">Kütüphane</div>
+                </div>
+            </div>
+            <div style="font-size: 14px; font-weight: 900; background: var(--glass); padding: 8px 15px; border-radius: 12px; border: 1px solid var(--glass-border);">
+                💎 <span id="coin-display">0</span>
+            </div>
+        </div>
+        <div class="xp-bar-wrap">
+            <div class="xp-bar-fill" id="xp-fill"></div>
+        </div>
+    </header>
+
+    <main id="main-scroll">
+        
+        <section id="tab-games" class="view active">
+            <div class="game-grid" id="grid-container">
+                </div>
+        </section>
+
+        <section id="tab-stats" class="view">
+            <div class="glass-panel">
+                <div class="list-row"><span>En Yüksek Skor</span> <strong id="high-score">0</strong></div>
+                <div class="list-row"><span>Toplam Oyun</span> <strong>0</strong></div>
+                <div class="list-row"><span>Kazanılan Başarılar</span> <strong>3 / 12</strong></div>
+            </div>
+        </section>
+
+        <section id="tab-settings" class="view">
+            <div class="glass-panel">
+                <div class="list-row" onclick="uiToggle('haptic')">
+                    <span>Haptic Geri Bildirim</span>
+                    <div id="tog-haptic" class="toggle on"></div>
+                </div>
+                <div class="list-row" onclick="uiToggle('sound')">
+                    <span>Ses Efektleri</span>
+                    <div id="tog-sound" class="toggle on"></div>
+                </div>
+                <div class="list-row" onclick="resetData()">
+                    <span style="color: #ff4444;">Verileri Sıfırla</span>
+                    <span>🗑️</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <nav>
+        <button class="nav-link active" onclick="showView('games', 'Kütüphane', this)">
+            <svg viewBox="0 0 24 24"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg>
+            <label>Arcade</label>
+        </button>
+        <button class="nav-link" onclick="showView('stats', 'Başarılar', this)">
+            <svg viewBox="0 0 24 24"><path d="M16,6L18.29,8.29L13.41,13.17L9.41,9.17L2,16.59L3.41,18L9.41,12L13.41,16L19.71,9.71L22,12V6H16Z"/></svg>
+            <label>Skorlar</label>
+        </button>
+        <button class="nav-link" onclick="showView('settings', 'Kontrol', this)">
+            <svg viewBox="0 0 24 24"><path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.35 19.43,11.03L21.54,9.37C21.73,9.22 21.78,8.97 21.68,8.76L19.68,5.3C19.58,5.09 19.33,5.03 19.12,5.11L16.64,6.11C16.12,5.71 15.56,5.39 14.95,5.14L14.57,2.5C14.53,2.28 14.34,2.1 14.1,2.1H10.1C9.86,2.1 9.67,2.28 9.63,2.5L9.25,5.14C8.64,5.39 8.08,5.71 7.56,6.11L5.08,5.11C4.87,5.03 4.62,5.09 4.52,5.3L2.52,8.76C2.42,8.97 2.47,9.22 2.66,9.37L4.77,11.03C4.73,11.35 4.7,11.67 4.7,12C4.7,12.33 4.73,12.65 4.77,12.97L2.66,14.63C2.47,14.78 2.42,15.03 2.52,15.24L4.52,18.7C4.62,18.91 4.87,18.97 5.08,18.89L7.56,17.89C8.08,18.29 8.64,18.61 9.25,18.86L9.63,21.5C9.67,21.72 9.86,21.9 10.1,21.9H14.1C14.34,21.9 14.53,21.72 14.57,21.5L14.95,18.86C15.56,18.61 16.12,18.29 16.64,17.89L19.12,18.89C19.33,18.97 19.58,18.91 19.68,18.7L21.68,15.24C21.78,15.03 21.73,14.78 21.54,14.63L19.43,12.97Z"/></svg>
+            <label>Sistem</label>
+        </button>
+    </nav>
+
+    <script>
+        // --- 1. DATA KONTROL (Kayıt Sistemi) ---
+        let appData = {
+            xp: 0, lvl: 1, coins: 500, mode: 'mobile', 
+            settings: { haptic: true, sound: true },
+            highScore: 0
+        };
+
+        function saveData() { localStorage.setItem('nexus_data', JSON.stringify(appData)); }
+        function loadData() {
+            const saved = localStorage.getItem('nexus_data');
+            if(saved) appData = JSON.parse(saved);
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('coin-display').innerText = appData.coins.toLocaleString();
+            document.getElementById('lvl-display').innerText = appData.lvl;
+            document.getElementById('high-score').innerText = appData.highScore;
+            
+            // XP Barı hesapla (Her seviye 1000 XP)
+            const progress = (appData.xp % 1000) / 10;
+            document.getElementById('xp-fill').style.width = progress + "%";
+            
+            // Toggle durumları
+            document.getElementById('tog-haptic').className = `toggle ${appData.settings.haptic ? 'on' : ''}`;
+            document.getElementById('tog-sound').className = `toggle ${appData.settings.sound ? 'on' : ''}`;
+        }
+
+        // --- 2. ENGINE BAŞLATMA ---
+        function startEngine(mode) {
+            appData.mode = mode;
+            if(mode === 'pc') document.body.classList.add('mode-pc');
+            
+            generateGrid();
+            document.getElementById('splash').style.transform = "translateY(-100%)";
+            
+            playSound('startup');
+            saveData();
+        }
+
+        // --- 3. DİNAMİK GRID & 3D TILT ---
+        function generateGrid() {
+            const container = document.getElementById('grid-container');
+            const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+            const icons = ['⚡','🧠','🐍','🚀','🧩','🎹','🏎️','🎯','💎','🔥','🌀','⚔️','👾','🥊','🏀','⚽','⛳','🎰','🔮','🔭','🧨','💣','🧪','🧬','🛸','🛰️'];
+            
+            alphabet.forEach((char, i) => {
+                const card = document.createElement('a');
+                card.href = char.toLowerCase() + ".html";
+                card.className = "card";
+                card.style.animationDelay = (i * 0.05) + "s"; // Staggered entry
+                card.innerHTML = `
+                    <div class="card-glow"></div>
+                    <div class="card-icon">${icons[i]}</div>
+                    <div class="card-info">
+                        <span>SERİES: ${char}00${i}</span>
+                        <h3>Nexus ${char}</h3>
+                    </div>
+                `;
+                
+                // 3D Tilt Efekti (Sadece PC için)
+                if(appData.mode === 'pc') {
+                    card.addEventListener('mousemove', e => {
+                        const rect = card.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+                        
+                        card.style.setProperty('--x', `${x}px`);
+                        card.style.setProperty('--y', `${y}px`);
+                        
+                        const centerX = rect.width / 2;
+                        const centerY = rect.height / 2;
+                        const rotateX = (y - centerY) / 10;
+                        const rotateY = (centerX - x) / 10;
+                        
+                        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+                    });
+                    
+                    card.addEventListener('mouseleave', () => {
+                        card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)`;
+                    });
+                }
+                
+                container.appendChild(card);
+            });
+        }
+
+        // --- 4. NAVIGATION & UI ---
+        function showView(viewId, title, btn) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById('tab-' + viewId).classList.add('active');
+            
+            document.getElementById('view-title').innerText = title;
+            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+            btn.classList.add('active');
+            
+            haptic(15);
+            playSound('click');
+        }
+
+        function uiToggle(key) {
+            appData.settings[key] = !appData.settings[key];
+            updateUI();
+            saveData();
+            haptic(20);
+        }
+
+        function resetData() {
+            if(confirm("Tüm veriler sıfırlanacak. Emin misin?")) {
+                localStorage.removeItem('nexus_data');
+                location.reload();
+            }
+        }
+
+        // --- 5. HAPTIC & SES SİSTEMİ ---
+        function haptic(ms) {
+            if (appData.settings.haptic && navigator.vibrate) navigator.vibrate(ms);
+        }
+
+        function playSound(type) {
+            if (!appData.settings.sound) return;
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            if(type === 'click') {
+                osc.frequency.setValueAtTime(800, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                osc.stop(ctx.currentTime + 0.1);
+            } else if(type === 'startup') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(220, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.5);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                osc.stop(ctx.currentTime + 0.5);
+            }
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+        }
+
+        // Başlangıçta veriyi yükle
+        window.onload = loadData;
+
+    </script>
+</body>
+</html>
