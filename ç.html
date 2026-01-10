@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Neon Hook | Sovereign Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Inter:wght@400;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #030308;
+            --neon: #00f2ff;
+            --pink: #ff00ff;
+            --gold: #ffcc00;
+            --danger: #ff3366;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); font-family: 'Inter', sans-serif; }
+
+        /* --- UI KATMANLARI --- */
+        #ui-layer { 
+            position: fixed; inset: 0; z-index: 1000; pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 30px;
+        }
+        .stats { display: flex; justify-content: space-between; pointer-events: auto; }
+        .stat-item { text-align: center; }
+        .stat-val { font-family: 'Syncopate'; font-size: 28px; color: var(--neon); text-shadow: 0 0 20px var(--neon); }
+        .stat-label { font-size: 10px; color: #555; letter-spacing: 3px; font-weight: 900; }
+
+        #overlay, #game-over { 
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9); 
+            z-index: 5000; display: flex; align-items: center; justify-content: center; 
+            backdrop-filter: blur(25px);
+        }
+        .window { 
+            width: 85%; max-width: 450px; background: rgba(15,15,20,0.98); 
+            border: 1px solid rgba(255,255,255,0.05); border-top: 6px solid var(--neon); 
+            border-radius: 40px; padding: 50px 30px; text-align: center;
+        }
+        .btn { 
+            width: 100%; padding: 22px; border-radius: 20px; border: none; 
+            background: var(--neon); color: #000; font-family: 'Syncopate'; 
+            font-weight: 900; font-size: 12px; cursor: pointer; margin-top: 20px;
+            box-shadow: 0 10px 30px rgba(0, 242, 255, 0.2);
+        }
+
+        canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+        
+        #instruction {
+            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+            color: #444; font-family: 'Syncopate'; font-size: 10px; letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="ui-layer">
+    <div class="stats">
+        <div class="stat-item"><div class="stat-label">MESAFE</div><div id="score-ui" class="stat-val">0</div></div>
+        <div class="stat-item"><div class="stat-label">REKOR</div><div id="best-ui" class="stat-val" style="color:var(--pink);">0</div></div>
+    </div>
+</div>
+
+<div id="overlay">
+    <div class="window">
+        <h2 style="font-family:'Syncopate'; color:var(--neon); margin:0;">NEON HOOK</h2>
+        <p style="color:#777; font-size:13px; line-height:1.8; margin:25px 0;">
+            <b>GÜVENLİ BAŞLANGIÇ AKTİF.</b><br>
+            Havada asılı parlayan noktalara kanca atarak ilerle.<br><br>
+            🔵 <b>DOKUN:</b> Kanca At / Tutun<br>
+            ⚪ <b>BIRAK:</b> Kancayı Çöz / Fırla
+        </p>
+        <button class="btn" id="start-btn">SİSTEMİ AÇ</button>
+    </div>
+</div>
+
+<div id="game-over" style="display:none;">
+    <div class="window">
+        <h2 style="font-family:'Syncopate'; color:var(--danger);">SİNYAL KAYBI</h2>
+        <div id="final-score" style="font-size:60px; font-weight:900; color:var(--neon); font-family:'Syncopate'; margin:20px 0;">0</div>
+        <button class="btn" onclick="location.reload()">YENİDEN BAĞLAN</button>
+    </div>
+</div>
+
+<div id="instruction">TAVANA TUTUNARAK İLERLE</div>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+/**
+ * SOVEREIGN ELITE ENGINE - HOOK PHYSICS v4.2
+ */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// Oyun Durumu
+let state = {
+    running: false,
+    started: false, // İlk kanca atıldı mı?
+    width: 0,
+    height: 0,
+    cameraX: 0,
+    score: 0,
+    best: localStorage.getItem('neon_hook_best') || 0
+};
+
+// Oyuncu ve Fizik Parametreleri
+const player = {
+    x: 150,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    radius: 14,
+    gravity: 0.35,
+    friction: 0.985,
+    isHooked: false,
+    hookPoint: { x: 0, y: 0 },
+    hookLength: 0
+};
+
+let anchors = []; // Kanca atılacak noktalar
+let particles = [];
+
+// Ses İşlemcisi
+const AudioEngine = {
+    ctx: null,
+    init() { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+    play(freq, type, dur, vol) {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + dur);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(); osc.stop(this.ctx.currentTime + dur);
+    }
+};
+
+function init() {
+    state.width = canvas.width = window.innerWidth;
+    state.height = canvas.height = window.innerHeight;
+    player.y = state.height - 200; // Güvenli başlangıç yüksekliği
+    document.getElementById('best-ui').innerText = state.best;
+    
+    // İlk Anchor'ları oluştur
+    anchors = [];
+    for(let i=0; i<15; i++) {
+        spawnAnchor(i * 300 + 400);
+    }
+}
+
+function spawnAnchor(xPos) {
+    anchors.push({
+        x: xPos + (Math.random() * 150),
+        y: 80 + (Math.random() * 200),
+        active: true
+    });
+}
+
+// Kontroller
+const handleInputStart = (e) => {
+    if(!state.running) return;
+    const rect = canvas.getBoundingClientRect();
+    const touchX = (e.touches ? e.touches[0].clientX : e.clientX) + state.cameraX;
+    const touchY = (e.touches ? e.touches[0].clientY : e.clientY);
+
+    // En yakın anchor'u bul (Menzil kontrolüyle)
+    let closest = null;
+    let minDist = 600;
+
+    anchors.forEach(a => {
+        const d = Math.hypot(a.x - touchX, a.y - touchY);
+        if(d < minDist) {
+            minDist = d;
+            closest = a;
+        }
+    });
+
+    if(closest) {
+        player.isHooked = true;
+        player.hookPoint = { x: closest.x, y: closest.y };
+        player.hookLength = Math.hypot(player.x - closest.x, player.y - closest.y);
+        state.started = true; // Oyun fiziksel olarak başlar
+        AudioEngine.play(400, 'triangle', 0.2, 0.1);
+    }
+};
+
+const handleInputEnd = () => {
+    player.isHooked = false;
+};
+
+window.addEventListener('mousedown', handleInputStart);
+window.addEventListener('mouseup', handleInputEnd);
+window.addEventListener('touchstart', handleInputStart);
+window.addEventListener('touchend', handleInputEnd);
+
+document.getElementById('start-btn').onclick = () => {
+    AudioEngine.init();
+    document.getElementById('overlay').style.display = 'none';
+    state.running = true;
+    update();
+};
+
+function update() {
+    if(!state.running) return;
+
+    // FİZİK MOTORU
+    if(state.started) {
+        if(player.isHooked) {
+            // Sarkaç Fiziği
+            let dx = player.x - player.hookPoint.x;
+            let dy = player.y - player.hookPoint.y;
+            let currentDist = Math.sqrt(dx*dx + dy*dy);
+            
+            if(currentDist > player.hookLength) {
+                let angle = Math.atan2(dy, dx);
+                // Pozisyonu sınırla
+                player.x = player.hookPoint.x + Math.cos(angle) * player.hookLength;
+                player.y = player.hookPoint.y + Math.sin(angle) * player.hookLength;
+                
+                // Hızı yansıt (Gerilme kuvveti)
+                let velocityAngle = Math.atan2(player.vy, player.vx);
+                let speed = Math.sqrt(player.vx*player.vx + player.vy*player.vy);
+                
+                // İpin yönüne dik kuvvet uygulama (Salınım ivmesi)
+                player.vx -= Math.cos(angle) * 0.7;
+                player.vy -= Math.sin(angle) * 0.7;
+            }
+        }
+
+        player.vy += player.gravity;
+        player.vx *= player.friction;
+        player.x += player.vx;
+        player.y += player.vy;
+    }
+
+    // Kamera Takibi (Yumuşak geçiş)
+    if(player.x > state.cameraX + state.width * 0.3) {
+        state.cameraX += (player.x - (state.cameraX + state.width * 0.3)) * 0.1;
+    }
+
+    // Skor ve Yeni Alan Üretimi
+    state.score = Math.max(state.score, Math.floor(player.x / 10) - 15);
+    document.getElementById('score-ui').innerText = state.score;
+
+    if(anchors[anchors.length-1].x < player.x + state.width) {
+        spawnAnchor(anchors[anchors.length-1].x + 300);
+    }
+
+    // Ölüm Kontrolü
+    if(player.y > state.height + 100) {
+        gameOver();
+    }
+
+    draw();
+    requestAnimationFrame(update);
+}
+
+function draw() {
+    ctx.clearRect(0, 0, state.width, state.height);
+
+    // Arka Plan Izgarası
+    ctx.strokeStyle = 'rgba(0, 242, 255, 0.03)';
+    ctx.lineWidth = 1;
+    for(let x = 0; x < state.width + 100; x += 100) {
+        ctx.beginPath();
+        ctx.moveTo(x - (state.cameraX % 100), 0);
+        ctx.lineTo(x - (state.cameraX % 100), state.height);
+        ctx.stroke();
+    }
+
+    // Kanca Hattı
+    if(player.isHooked) {
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#00f2ff';
+        ctx.strokeStyle = '#00f2ff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(player.x - state.cameraX, player.y);
+        ctx.lineTo(player.hookPoint.x - state.cameraX, player.hookPoint.y);
+        ctx.stroke();
+        
+        // Işık efekti
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    // Anchor Noktaları
+    anchors.forEach(a => {
+        let screenX = a.x - state.cameraX;
+        if(screenX > -50 && screenX < state.width + 50) {
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#00f2ff';
+            ctx.fillStyle = '#00f2ff';
+            ctx.beginPath();
+            ctx.arc(screenX, a.y, 6, 0, Math.PI*2);
+            ctx.fill();
+            // Dış halka
+            ctx.strokeStyle = 'rgba(0, 242, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(screenX, a.y, 15 + Math.sin(Date.now()/200)*5, 0, Math.PI*2);
+            ctx.stroke();
+        }
+    });
+
+    // Oyuncu
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = '#ff00ff';
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(player.x - state.cameraX, player.y, player.radius, 0, Math.PI*2);
+    ctx.fill();
+    
+    // Trail (Kuyruk efekti)
+    if(Math.abs(player.vx) > 2) {
+        ctx.fillStyle = 'rgba(255, 0, 255, 0.3)';
+        ctx.beginPath();
+        ctx.arc(player.x - state.cameraX - player.vx*2, player.y - player.vy*2, player.radius * 0.8, 0, Math.PI*2);
+        ctx.fill();
+    }
+}
+
+function gameOver() {
+    state.running = false;
+    AudioEngine.play(100, 'sawtooth', 0.5, 0.2);
+    if(state.score > state.best) localStorage.setItem('neon_hook_best', state.score);
+    document.getElementById('final-score').innerText = state.score;
+    document.getElementById('game-over').style.display = 'flex';
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
