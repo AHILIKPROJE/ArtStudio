@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Quantum Rift | Apex</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Inter:wght@400;600;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #000;
+            --accent: #00f2ff;
+            --purple: #7000ff;
+            --red: #ff3366;
+            --gold: #ffcc00;
+            --surface: rgba(8, 8, 8, 0.95);
+            --border: rgba(255, 255, 255, 0.05);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; outline: none; }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; }
+
+        /* --- UI OVERLAYS --- */
+        #overlay, #end-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 5000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(30px); }
+        .card { width: 90%; max-width: 420px; background: var(--surface); border: 1px solid var(--border); border-top: 5px solid var(--accent); border-radius: 40px; padding: 50px 30px; text-align: center; box-shadow: 0 50px 100px #000; }
+        .btn { width: 100%; padding: 22px; border-radius: 20px; border: none; background: var(--accent); color: #000; font-family: 'Syncopate'; font-weight: 900; font-size: 11px; cursor: pointer; margin-top: 20px; transition: 0.3s; }
+        
+        /* --- HUD --- */
+        header { height: 90px; padding: 0 30px; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(to bottom, #0a0a0a, transparent); position: relative; z-index: 100; }
+        .hud-v { font-family: 'Syncopate'; font-size: 14px; color: var(--accent); }
+        .label { font-size: 9px; color: #444; letter-spacing: 2px; text-transform: uppercase; }
+
+        /* --- GAME ELEMENTS --- */
+        #stage { position: relative; width: 100%; height: calc(100% - 140px); overflow: hidden; touch-action: none; background: radial-gradient(circle at center, #050505 0%, #000 100%); }
+        
+        #energy-bar-container { position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: #111; z-index: 200; }
+        #energy-fill { height: 100%; width: 100%; background: var(--accent); transition: width 0.1s linear; }
+
+        #core { position: absolute; width: 40px; height: 40px; background: var(--purple); border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 30px var(--purple); z-index: 50; pointer-events: none; }
+        
+        .gate { position: absolute; width: 80px; height: 80px; border: 2px dashed var(--accent); border-radius: 50%; transform: translate(-50%, -50%) scale(0); transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 10; opacity: 0; }
+        .gate.active { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+
+        .obs { position: absolute; width: 45px; height: 45px; background: var(--red); border-radius: 8px; transform: translate(-50%, -50%); box-shadow: 0 0 20px var(--red); z-index: 5; animation: spin 5s linear infinite; }
+        @keyframes spin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+        .well { position: absolute; width: 120px; height: 120px; border: 1px solid rgba(112, 0, 255, 0.2); border-radius: 50%; transform: translate(-50%, -50%); z-index: 2; background: radial-gradient(circle, rgba(112, 0, 255, 0.1) 0%, transparent 70%); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.5; } 50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.2; } 100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.5; } }
+
+        footer { height: 50px; background: #080808; display: flex; align-items: center; padding: 0 30px; border-top: 1px solid var(--border); }
+        #prog { flex: 1; height: 2px; background: #1a1a1a; margin: 0 20px; }
+        #prog-f { height: 100%; width: 0%; background: var(--accent); transition: 0.3s; }
+    </style>
+</head>
+<body>
+
+<div id="overlay">
+    <div class="card">
+        <h2 style="font-family:'Syncopate'; color:var(--accent);">Portal Deliği</h2>
+        <p style="font-size:12px; color:#666; line-height:1.6; margin: 20px 0;">Enerji tükenmeden kapıları topla. Singülaritelere (Kırmızı) dokunma. Yerçekimi kuyularına dikkat et.</p>
+        <button class="btn" id="btn-start">BAĞLAN</button>
+    </div>
+</div>
+
+<header>
+    <div><div class="label">Stabilite</div><div id="lvl-ui" class="hud-v">L-01</div></div>
+    <button class="label" style="background:none; border:none; cursor:pointer;" onclick="location.href='index.html'">Ayrıl</button>
+    <div style="text-align:right;"><div class="label">Prestij</div><div id="xp-ui" class="hud-v">0</div></div>
+</header>
+
+<div id="stage">
+    <div id="energy-bar-container"><div id="energy-fill"></div></div>
+    <div id="core"></div>
+</div>
+
+<footer>
+    <span class="label" id="hits-ui">0 / 5</span>
+    <div id="prog"><div id="prog-f"></div></div>
+    <span class="label" style="color:var(--accent)">Apex-v3</span>
+</footer>
+
+<div id="end-screen" style="display:none;">
+    <div class="card">
+        <h2 id="end-t" style="font-family:'Syncopate';">SİSTEM ÇÖKTÜ</h2>
+        <p id="end-d" style="font-size:13px; color:#777; margin:20px 0;"></p>
+        <button class="btn" id="btn-action">YENİDEN BAŞLAT</button>
+    </div>
+</div>
+
+<script>
+    const STORAGE = 'nexus_v3_apex';
+    let data = JSON.parse(localStorage.getItem(STORAGE)) || { xp: 0 };
+    
+    let S = {
+        lvl: 1, hits: 0, target: 5, energy: 100,
+        x: 0, y: 0, vx: 0, vy: 0, size: 40,
+        isRunning: false, time: 0
+    };
+
+    const stage = document.getElementById('stage');
+    const core = document.getElementById('core');
+    let gate = null;
+    let obs = [];
+    let wells = [];
+
+    const audio = new (window.AudioContext || window.webkitAudioContext)();
+    function sfx(f, t, d, v) {
+        const o = audio.createOscillator(); const g = audio.createGain();
+        o.type = t; o.frequency.setValueAtTime(f, audio.currentTime);
+        g.gain.setValueAtTime(v, audio.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.00001, audio.currentTime + d);
+        o.connect(g); g.connect(audio.destination);
+        o.start(); o.stop(audio.currentTime + d);
+    }
+
+    document.getElementById('btn-start').onclick = () => {
+        document.getElementById('overlay').style.display = 'none';
+        initLvl();
+    };
+
+    function initLvl() {
+        S.hits = 0; S.target = 4 + S.lvl; S.energy = 100;
+        S.x = stage.offsetWidth / 2; S.y = stage.offsetHeight / 2;
+        S.vx = 0; S.vy = 0;
+        S.size = 40 - (S.lvl); // Seviye arttıkça çekirdek küçülür (daha zor vurulur)
+        core.style.width = S.size + 'px'; core.style.height = S.size + 'px';
+
+        obs.forEach(o => o.el.remove()); obs = [];
+        wells.forEach(w => w.el.remove()); wells = [];
+
+        // Engel Sayısı Artışı
+        for(let i=0; i < S.lvl; i++) spawnObs();
+        // Gravity Wells (3. Seviyeden sonra)
+        if(S.lvl > 2) for(let i=0; i < Math.floor(S.lvl/3); i++) spawnWell();
+
+        S.isRunning = true;
+        updateUI(); spawnGate();
+        requestAnimationFrame(loop);
+    }
+
+    function spawnObs() {
+        const el = document.createElement('div'); el.className = 'obs';
+        const x = 50 + Math.random()*(stage.offsetWidth-100);
+        const y = 50 + Math.random()*(stage.offsetHeight-100);
+        el.style.left = x+'px'; el.style.top = y+'px';
+        stage.appendChild(el); obs.push({x, y, el});
+    }
+
+    function spawnWell() {
+        const el = document.createElement('div'); el.className = 'well';
+        const x = 100 + Math.random()*(stage.offsetWidth-200);
+        const y = 100 + Math.random()*(stage.offsetHeight-200);
+        el.style.left = x+'px'; el.style.top = y+'px';
+        stage.appendChild(el); wells.push({x, y, el});
+    }
+
+    function spawnGate() {
+        if(gate) gate.el.remove();
+        const el = document.createElement('div'); el.className = 'gate';
+        const x = 60 + Math.random()*(stage.offsetWidth-120);
+        const y = 60 + Math.random()*(stage.offsetHeight-120);
+        el.style.left = x+'px'; el.style.top = y+'px';
+        stage.appendChild(el);
+        setTimeout(() => el.classList.add('active'), 50);
+        gate = {x, y, el};
+    }
+
+    function loop(t) {
+        if(!S.isRunning) return;
+        const dt = (t - S.time)/16 || 1; S.time = t;
+
+        // Energy Decay
+        S.energy -= 0.05 + (S.lvl * 0.01);
+        document.getElementById('energy-fill').style.width = S.energy + '%';
+        if(S.energy <= 0) die("ENERJİ TÜKENDİ");
+
+        // Gravity Well Effect
+        wells.forEach(w => {
+            const dx = w.x - S.x, dy = w.y - S.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if(dist < 150) {
+                S.vx += (dx / dist) * 0.15;
+                S.vy += (dy / dist) * 0.15;
+            }
+        });
+
+        S.vx *= 0.98; S.vy *= 0.98;
+        S.x += S.vx * dt; S.y += S.vy * dt;
+
+        // Wall Bounce
+        const r = S.size/2;
+        if(S.x < r || S.x > stage.offsetWidth-r) { S.vx *= -0.8; S.x = S.x < r ? r : stage.offsetWidth-r; sfx(150, 'sine', 0.1, 0.05); }
+        if(S.y < r || S.y > stage.offsetHeight-r) { S.vy *= -0.8; S.y = S.y < r ? r : stage.offsetHeight-r; sfx(150, 'sine', 0.1, 0.05); }
+
+        core.style.left = S.x+'px'; core.style.top = S.y+'px';
+
+        // Obstacle Collision
+        obs.forEach(o => {
+            if(Math.sqrt((S.x-o.x)**2 + (S.y-o.y)**2) < (S.size/2 + 20)) die("PORTAL TUTULMASI");
+        });
+
+        // Gate Collision
+        if(gate && Math.sqrt((S.x-gate.x)**2 + (S.y-gate.y)**2) < 40) {
+            S.hits++; S.energy = Math.min(100, S.energy + 25);
+            sfx(800, 'sine', 0.2, 0.05);
+            if(S.hits >= S.target) win(); else spawnGate();
+            updateUI();
+        }
+
+        requestAnimationFrame(loop);
+    }
+
+    function updateUI() {
+        document.getElementById('lvl-ui').innerText = 'L-' + S.lvl.toString().padStart(2, '0');
+        document.getElementById('xp-ui').innerText = data.xp;
+        document.getElementById('hits-ui').innerText = `${S.hits} / ${S.target}`;
+        document.getElementById('prog-f').style.width = (S.hits/S.target)*100 + '%';
+    }
+
+    function die(m) {
+        S.isRunning = false; sfx(100, 'sawtooth', 0.5, 0.1);
+        document.getElementById('end-t').innerText = "SİSTEM ÇÖKTÜ";
+        document.getElementById('end-t').style.color = "var(--red)";
+        document.getElementById('end-d').innerText = m + ". Seviye 01'den başla.";
+        document.getElementById('end-screen').style.display = 'flex';
+        document.getElementById('btn-action').onclick = () => { S.lvl = 1; location.reload(); };
+    }
+
+    function win() {
+        S.isRunning = false; sfx(1200, 'square', 0.5, 0.1);
+        data.xp += S.lvl * 250; localStorage.setItem(STORAGE, JSON.stringify(data));
+        if(S.lvl === 10) {
+            document.getElementById('end-t').innerText = "APEX REACHED";
+            document.getElementById('end-d').innerText = "Tüm quantum kapıları mühürlendi. Prestij zirvede.";
+            document.getElementById('btn-action').innerText = "BAŞTAN BAŞLA";
+            document.getElementById('btn-action').onclick = () => { S.lvl = 1; location.reload(); };
+        } else {
+            document.getElementById('end-t').innerText = "LEVEL TAMAMLANDI!";
+            document.getElementById('end-t').style.color = "var(--accent)";
+            document.getElementById('end-d').innerText = `Seviye ${S.lvl} tamamlandı. Bir sonraki protokol zorlaşıyor.`;
+            document.getElementById('btn-action').innerText = "SONRAKİ SEVİYE";
+            document.getElementById('btn-action').onclick = () => { S.lvl++; document.getElementById('end-screen').style.display = 'none'; initLvl(); };
+        }
+        document.getElementById('end-screen').style.display = 'flex';
+    }
+
+    stage.addEventListener('mousedown', e => {
+        if(!S.isRunning) return;
+        const r = stage.getBoundingClientRect();
+        const a = Math.atan2(e.clientY - r.top - S.y, e.clientX - r.left - S.x);
+        S.vx += Math.cos(a) * 11; S.vy += Math.sin(a) * 11;
+        sfx(400, 'triangle', 0.1, 0.03);
+    });
+
+    stage.addEventListener('touchstart', e => {
+        e.preventDefault();
+        if(!S.isRunning) return;
+        const r = stage.getBoundingClientRect();
+        const a = Math.atan2(e.touches[0].clientY - r.top - S.y, e.touches[0].clientX - r.left - S.x);
+        S.vx += Math.cos(a) * 11; S.vy += Math.sin(a) * 11;
+        sfx(400, 'triangle', 0.1, 0.03);
+    });
+</script>
+</body>
+</html>
