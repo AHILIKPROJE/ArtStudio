@@ -3,52 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Neon T-Evolution</title>
+    <title>Neon T-Evolution | Universal</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
     <style>
         :root { --neon: #00f3ff; --magenta: #ff00ff; --gold: #ffe600; }
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; touch-action: none; }
+        
+        * { 
+            box-sizing: border-box; margin: 0; padding: 0; 
+            user-select: none; -webkit-user-select: none; 
+            touch-action: none; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+
         body { 
             background: #000; font-family: 'Orbitron', sans-serif; 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
             height: 100vh; overflow: hidden; color: white;
+            position: fixed; width: 100%;
         }
         
-        #game-wrapper { position: relative; padding: 5px; border: 2px solid #222; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,1); }
-        canvas { display: block; background: radial-gradient(circle, #050505 0%, #000 100%); border-radius: 10px; }
+        #game-wrapper { position: relative; padding: 5px; border: 2px solid #222; border-radius: 15px; }
+        canvas { display: block; background: #000; border-radius: 10px; }
 
-        /* HUD */
-        #hud { position: absolute; top: -50px; width: 100%; display: flex; justify-content: space-between; font-size: 14px; color: var(--neon); }
-        .power-bar { position: absolute; bottom: -20px; left: 0; width: 100%; height: 6px; background: #111; border-radius: 3px; overflow: hidden; }
+        #hud { position: absolute; top: -45px; width: 100%; display: flex; justify-content: space-between; font-size: 14px; color: var(--neon); }
+        .power-bar { position: absolute; bottom: -15px; left: 0; width: 100%; height: 6px; background: #111; border-radius: 3px; }
         #power-fill { width: 0%; height: 100%; background: var(--gold); box-shadow: 0 0 15px var(--gold); transition: 0.3s; }
 
-        /* YENİ NESİL KONTROLLER: SOL VE SAĞ */
-        .ctrl-group { position: fixed; bottom: 40px; display: flex; gap: 20px; z-index: 100; }
-        #left-group { left: 20px; }
-        #right-group { right: 20px; }
+        .ctrl-group { position: fixed; bottom: 30px; display: flex; gap: 15px; z-index: 1000; }
+        #left-group { left: 15px; }
+        #right-group { right: 15px; }
 
         .btn { 
-            width: 85px; height: 85px; background: rgba(255,255,255,0.03); 
+            width: 80px; height: 80px; background: rgba(255,255,255,0.05); 
             border: 2px solid rgba(255,255,255,0.1); border-radius: 20px; 
             display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 32px; backdrop-filter: blur(5px);
-            transition: transform 0.1s, border-color 0.3s;
+            color: white; font-size: 30px; backdrop-filter: blur(8px);
         }
-        .btn:active { transform: scale(0.9); border-color: var(--neon); background: rgba(0,243,255,0.1); }
+        .btn:active { background: var(--neon); color: #000; border-color: var(--neon); transform: scale(0.95); }
         #btn-up { border-color: var(--magenta); color: var(--magenta); }
         #btn-down { border-color: var(--gold); color: var(--gold); }
-
-        /* Animasyonlar */
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-        .overdrive-active { animation: pulse 0.5s infinite; border-color: var(--gold) !important; }
     </style>
 </head>
-<body>
+<body oncontextmenu="return false;">
 
 <div id="game-wrapper">
     <div id="hud">
         <div>SKOR: <span id="sc">0</span></div>
-        <div>OVERDRIVE</div>
+        <div style="font-size: 10px; color: var(--gold)">EVOLUTION</div>
     </div>
     <canvas id="tetris"></canvas>
     <div class="power-bar"><div id="power-fill"></div></div>
@@ -65,9 +66,12 @@
 </div>
 
 <script>
+// iOS Zoom Engelleme
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+
 const canvas = document.getElementById('tetris');
 const ctx = canvas.getContext('2d');
-const ROW = 20, COL = 10, SQ = window.innerHeight > 800 ? 35 : 28;
+const ROW = 20, COL = 10, SQ = window.innerHeight > 750 ? 32 : 25;
 canvas.width = COL * SQ; canvas.height = ROW * SQ;
 
 const COLORS = { I: "#00f3ff", T: "#bd00ff", Z: "#ff0055", S: "#00ff66", O: "#ffe600", L: "#ff9900", J: "#0044ff" };
@@ -82,13 +86,13 @@ const SHAPES = {
 };
 
 let board = Array.from({length: ROW}, () => Array(COL).fill(0));
-let score = 0, lines = 0, shake = 0, particles = [], power = 0, isOverdrive = false;
+let score = 0, shake = 0, particles = [], power = 0, isOverdrive = false;
 
 function createParticles(x, y, color) {
-    for(let i=0; i<12; i++) {
+    for(let i=0; i<10; i++) {
         particles.push({
             x: x * SQ + SQ/2, y: y * SQ + SQ/2,
-            vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15,
+            vx: (Math.random()-0.5)*12, vy: (Math.random()-0.5)*12,
             life: 1, color: color
         });
     }
@@ -102,10 +106,6 @@ class Piece {
         this.x = 3; this.y = -2;
     }
     collision(x, y, shape) {
-        if(isOverdrive) { // Süper Güç: Duvarlara takılmaz ama zemine takılır
-             if(this.y + y + shape.length > ROW) return true;
-             return false;
-        }
         for(let r=0; r<shape.length; r++) {
             for(let c=0; c<shape[r].length; c++) {
                 if(!shape[r][c]) continue;
@@ -138,24 +138,12 @@ class Piece {
             }
         }
         if(cleared > 0) {
-            score += cleared * 150;
-            power += cleared * 25;
-            shake = 20;
-            if(power >= 100) startOverdrive();
+            score += cleared * 150; power += cleared * 20;
+            if(power >= 100) { isOverdrive = true; power = 0; setTimeout(()=>isOverdrive=false, 5000); }
             document.getElementById('sc').innerText = score;
             document.getElementById('power-fill').style.width = Math.min(100, power) + '%';
         }
     }
-}
-
-function startOverdrive() {
-    isOverdrive = true; power = 0;
-    canvas.style.boxShadow = "0 0 50px #ffe600";
-    setTimeout(() => { 
-        isOverdrive = false; 
-        canvas.style.boxShadow = "0 0 50px rgba(0,0,0,1)";
-        document.getElementById('power-fill').style.width = '0%';
-    }, 5000);
 }
 
 let p = new Piece("ITOSLZJ"[Math.floor(Math.random()*7)]);
@@ -165,40 +153,32 @@ function draw() {
     let sx = (Math.random()-0.5)*shake;
     let sy = (Math.random()-0.5)*shake;
     ctx.setTransform(1,0,0,1,sx,sy);
-    if(shake > 0) shake *= 0.85;
+    if(shake > 0) shake *= 0.9;
     
     ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // Grid ve Glow
-    ctx.strokeStyle = "rgba(255,255,255,0.03)";
-    for(let i=0; i<COL; i++) ctx.strokeRect(i*SQ, 0, SQ, canvas.height);
-
-    // Sabit Bloklar
     for(let r=0; r<ROW; r++) for(let c=0; c<COL; c++) {
         if(board[r][c]) {
-            ctx.shadowBlur = 10; ctx.shadowColor = board[r][c];
             ctx.fillStyle = board[r][c]; ctx.fillRect(c*SQ+2, r*SQ+2, SQ-4, SQ-4);
         }
     }
 
-    // Aktif Blok
-    ctx.shadowBlur = isOverdrive ? 30 : 15;
-    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 15; ctx.shadowColor = p.color;
     ctx.fillStyle = p.color;
     for(let r=0; r<p.active.length; r++) for(let c=0; c<p.active[r].length; c++)
         if(p.active[r][c]) ctx.fillRect((p.x+c)*SQ+2, (p.y+r)*SQ+2, SQ-4, SQ-4);
+    ctx.shadowBlur = 0;
 
-    // Parçacıklar
     particles.forEach((pr, i) => {
         pr.x += pr.vx; pr.y += pr.vy; pr.life -= 0.02;
         if(pr.life <= 0) particles.splice(i,1);
         ctx.fillStyle = pr.color; ctx.globalAlpha = pr.life;
         ctx.fillRect(pr.x, pr.y, 4, 4);
     });
-    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
 
     let now = Date.now();
-    if(now - dropStart > (isOverdrive ? 50 : 600)) {
+    if(now - dropStart > (isOverdrive ? 80 : 600)) {
         if(!p.collision(0, 1, p.active)) p.y++;
         else { p.lock(); p = new Piece("ITOSLZJ"[Math.floor(Math.random()*7)]); }
         dropStart = now;
@@ -216,17 +196,24 @@ const move = (dir) => {
     }
 };
 
+// PC KLAVYE DESTEĞİ (TEKRAR EKLENDİ)
+document.addEventListener('keydown', (e) => {
+    if(e.key === "ArrowLeft") move('L');
+    if(e.key === "ArrowRight") move('R');
+    if(e.key === "ArrowDown") move('D');
+    if(e.key === "ArrowUp") move('U');
+});
+
+// MOBİL BUTON DESTEĞİ
 const bind = (id, act) => {
     const el = document.getElementById(id);
-    el.addEventListener('pointerdown', e => { e.preventDefault(); move(act); });
+    el.addEventListener('pointerdown', e => { 
+        e.preventDefault(); 
+        move(act); 
+    }, {passive: false});
 };
-bind('btn-left', 'L'); bind('btn-right', 'R'); bind('btn-down', 'D'); bind('btn-up', 'U');
 
-// PC Klavye Desteği
-document.addEventListener('keydown', e => {
-    if(e.key === "ArrowLeft") move('L'); if(e.key === "ArrowRight") move('R');
-    if(e.key === "ArrowDown") move('D'); if(e.key === "ArrowUp") move('U');
-});
+bind('btn-left', 'L'); bind('btn-right', 'R'); bind('btn-down', 'D'); bind('btn-up', 'U');
 
 draw();
 </script>
