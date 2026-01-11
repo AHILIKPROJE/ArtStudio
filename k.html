@@ -3,57 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Neon Agar | Elite Arena</title>
+    <title>Neon Agar | Pro Evolution</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
     <style>
-        :root { --neon: #00f3ff; --magenta: #ff00ff; --red: #ff3333; --bg: #010105; }
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; touch-action: none; }
-        body { background: var(--bg); font-family: 'Orbitron', sans-serif; overflow: hidden; }
+        :root { --neon: #00f3ff; --magenta: #ff00ff; --red: #ff3333; --blue: #0066ff; --gold: #ffff00; --bg: #010105; }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); font-family: 'Orbitron', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
         canvas { display: block; }
 
-        /* HUD */
         #hud { position: fixed; inset: 0; pointer-events: none; display: none; z-index: 10; }
-        .stat { position: absolute; bottom: 20px; left: 20px; color: #fff; font-size: 18px; text-shadow: 0 0 5px var(--neon); }
+        .stat { position: absolute; bottom: 20px; left: 20px; color: #fff; font-size: 18px; text-shadow: 0 0 10px var(--neon); }
+        .leaderboard { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); border: 1px solid var(--neon); padding: 10px; border-radius: 5px; min-width: 150px; }
+        .lb-i { font-size: 11px; color: #fff; display: flex; justify-content: space-between; margin: 2px 0; }
         
-        .leaderboard { 
-            position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.85); 
-            border: 1px solid var(--neon); padding: 12px; border-radius: 8px; min-width: 160px;
-        }
-        .lb-title { color: var(--neon); font-size: 12px; margin-bottom: 8px; text-align: center; border-bottom: 1px solid #333; padding-bottom: 5px; }
-        .lb-item { font-size: 11px; color: #fff; display: flex; justify-content: space-between; margin: 3px 0; }
-        
-        .u-btn { 
-            position: absolute; pointer-events: auto; background: rgba(0,0,0,0.7); 
-            border: 2px solid var(--neon); color: var(--neon); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 10px;
-        }
-        #exit { top: 15px; left: 15px; width: 80px; height: 35px; border-radius: 5px; border-color: var(--red); color: var(--red); }
-        #split { bottom: 20px; right: 20px; width: 85px; height: 85px; box-shadow: 0 0 15px var(--neon); }
-        #feed { bottom: 20px; right: 120px; width: 85px; height: 85px; border-color: var(--magenta); color: var(--magenta); }
+        .u-btn { position: absolute; pointer-events: auto; background: rgba(0,0,0,0.7); border: 3px solid var(--neon); color: var(--neon); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+        #exit { top: 10px; left: 10px; width: 80px; height: 35px; border-radius: 5px; border-color: var(--red); color: var(--red); font-size: 10px; }
+        #split { bottom: 30px; right: 30px; width: 85px; height: 85px; }
+        #feed { bottom: 30px; right: 125px; width: 85px; height: 85px; border-color: var(--magenta); color: var(--magenta); }
 
-        #menu { position: fixed; inset: 0; background: #000; z-index: 100; display: flex; align-items: center; justify-content: center; }
-        .pnl { text-align: center; border: 2px solid var(--neon); padding: 40px; border-radius: 20px; background: rgba(0,5,15,0.95); }
-        input { background: #000; border: 1px solid #333; color: #fff; padding: 15px; margin-bottom: 20px; width: 220px; text-align: center; font-family: 'Orbitron'; outline: none; }
-        button#go { background: var(--neon); color: #000; border: none; padding: 15px 40px; font-weight: 900; cursor: pointer; border-radius: 5px; letter-spacing: 2px; }
+        #menu { position: fixed; inset: 0; background: radial-gradient(circle, #0a0a25 0%, #000 100%); z-index: 100; display: flex; align-items: center; justify-content: center; }
+        .pnl { text-align: center; border: 2px solid var(--neon); padding: 40px; border-radius: 20px; background: rgba(0,0,0,0.9); width: 85%; max-width: 400px; }
+        input { background: #000; border: 1px solid #333; color: #fff; padding: 15px; margin-bottom: 20px; width: 100%; text-align: center; font-family: 'Orbitron'; outline: none; }
+        button#go { background: var(--neon); color: #000; border: none; padding: 15px; font-weight: 900; cursor: pointer; border-radius: 5px; width: 100%; letter-spacing: 2px; }
     </style>
 </head>
 <body>
 
 <div id="hud">
     <div class="u-btn" id="exit">AYRIL</div>
-    <div class="stat">SKOR: <span id="mv">0</span></div>
-    <div class="leaderboard">
-        <div class="lb-title">SIRALAMA</div>
-        <div id="lbl"></div>
-    </div>
+    <div class="stat">KÜTLE: <span id="mv">0</span></div>
+    <div class="leaderboard"><div style="color:var(--neon); font-size:10px; text-align:center; margin-bottom:5px;">TOP 5</div><div id="lbl"></div></div>
     <div class="u-btn" id="feed">W</div>
-    <div class="u-btn" id="split">SPACE</div>
+    <div class="u-btn" id="split">BÖL</div>
 </div>
 
 <div id="menu">
     <div class="pnl">
-        <h1 style="color:var(--neon); margin-bottom: 25px; letter-spacing: 5px;">NEON ARENA</h1>
-        <input type="text" id="nk" value="KOMUTAN" maxlength="12"><br>
+        <h1 style="color:var(--neon); margin-bottom: 20px;">PRO EVOLUTION</h1>
+        <input type="text" id="nk" value="OYUNCU" maxlength="12">
         <button id="go">SAVAŞI BAŞLAT</button>
     </div>
 </div>
@@ -64,51 +51,53 @@
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 let W, H, active = false, player = null;
-let world = { w: 9000, h: 9000 }, cam = { x: 4500, y: 4500, z: 0.5 }, ms = { x: 4500, y: 4500 };
-let players = [], foods = [], ejected = [], cosmicEvents = [];
+let world = { w: 8000, h: 8000 }, cam = { x: 4000, y: 4000, z: 0.5 }, ms = { x: 4000, y: 4000 };
+let players = [], foods = [], ejected = [], anomalies = [];
 
-const CLRS = ["#00f3ff", "#ff00ff", "#00ff00", "#ffff00", "#ff3333", "#ffffff"];
-const NAMES = ["REİS", "KABUS", "CELLAT", "BARON", "AZRAİL", "GÖLGE", "VAMPİR", "AVCI", "ALFA", "ZALİM"];
+const CLRS = ["#00f3ff", "#ff00ff", "#00ff00", "#ffff00", "#ff3333"];
+const NAMES = ["BOT_X", "REAPER", "TITAN", "GHOST", "NEON", "ZEUS", "STORM", "VOID"];
 
 class Entity {
     constructor(name, clr, x, y, isBot) {
         this.name = name; this.clr = clr; this.isBot = isBot;
-        this.nodes = [{ x, y, m: 45, r: 52, vx: 0, vy: 0, sC: 0 }];
-        this.aiTarget = { x: Math.random()*world.w, y: Math.random()*world.h };
-        this.aiCooldown = 0;
+        this.nodes = [{ x, y, m: 50, r: 55, vx: 0, vy: 0, sC: 0, boost: 0, slow: 0 }];
+        this.aiTarget = null;
     }
 
     update() {
-        let totalMass = 0;
+        let totalM = 0;
         this.nodes.forEach((n, i) => {
-            totalMass += n.m;
+            totalM += n.m;
             let tx, ty;
             if (this.isBot) {
-                if(this.aiCooldown-- <= 0) {
-                    this.aiTarget = this.getSmartTarget(n);
-                    this.aiCooldown = 40 + Math.random()*40;
-                }
-                tx = this.aiTarget.x; ty = this.aiTarget.y;
+                let target = this.getAISmartTarget(n);
+                tx = target.x; ty = target.y;
             } else {
                 tx = cam.x + (ms.x - W/2)/cam.z; ty = cam.y + (ms.y - H/2)/cam.z;
             }
 
             let ang = Math.atan2(ty - n.y, tx - n.x);
-            // YENİ HIZ FORMÜLÜ: BÜYÜYÜNCE ÇOK YAVAŞLAMAZ
-            let speedFactor = 0.8 * Math.pow(n.m, -0.15); 
+            let spd = 0.65 * Math.pow(n.m, -0.15); // SENİN İSTEDİĞİN YAVAŞ HIZ
             
-            n.vx += Math.cos(ang) * speedFactor; n.vy += Math.sin(ang) * speedFactor;
+            if(n.boost > 0) { spd *= 2; n.boost--; }
+            if(n.slow > 0) { spd *= 0.5; n.slow--; }
+
+            n.vx += Math.cos(ang) * spd; n.vy += Math.sin(ang) * spd;
             n.vx *= 0.94; n.vy *= 0.94;
             n.x += n.vx; n.y += n.vy;
-
-            // Sınırlar
             n.x = Math.max(n.r, Math.min(world.w-n.r, n.x));
             n.y = Math.max(n.r, Math.min(world.h-n.r, n.y));
             if(n.sC > 0) n.sC--;
 
-            // Kozmik Olay Etkisi
-            cosmicEvents.forEach(e => {
-                if(e.type === 'blackhole' && Math.hypot(n.x-e.x, n.y-e.y) < e.r + n.r && n.m > 200) this.split();
+            // Anomalilerle Etkileşim
+            anomalies.forEach(a => {
+                let d = Math.hypot(n.x - a.x, n.y - a.y);
+                if(d < n.r + a.r) {
+                    if(a.type === 'black' && n.m > 180) this.split();
+                    if(a.type === 'star') n.boost = 150;
+                    if(a.type === 'cold') n.slow = 100;
+                    if(a.type === 'bomb') { n.m *= 0.9; n.r = Math.sqrt(n.m)*11; }
+                }
             });
 
             // Birleşme
@@ -118,27 +107,38 @@ class Entity {
                     if(n.sC === 0 && o.sC === 0) {
                         n.m += o.m; n.r = Math.sqrt(n.m)*11; this.nodes.splice(j,1); j--;
                     } else {
-                        let f = (n.r+o.r-d)*0.12, a = Math.atan2(o.y-n.y, o.x-n.x);
+                        let f = (n.r+o.r-d)*0.1, a = Math.atan2(o.y-n.y, o.x-n.x);
                         o.x += Math.cos(a)*f; o.y += Math.sin(a)*f;
                     }
                 }
             }
         });
-        return totalMass;
+        return totalM;
     }
 
-    getSmartTarget(n) {
-        let best = { x: Math.random()*world.w, y: Math.random()*world.h };
-        let dMin = 1200;
+    getAISmartTarget(n) {
+        // Botların Gelişmiş Zekası: Yem topla, rakipten kaç veya avla
+        let threat = null, food = null, prey = null;
+        let dThreat = 800, dFood = 1000, dPrey = 800;
+
         players.forEach(p => {
             if(p === this) return;
             p.nodes.forEach(on => {
-                let d = Math.hypot(n.x - on.x, n.y - on.y);
-                if(on.m > n.m * 1.1 && d < 700) { best = { x: n.x - (on.x-n.x), y: n.y - (on.y-n.y) }; dMin = d; }
-                else if(n.m > on.m * 1.2 && d < dMin) { best = { x: on.x, y: on.y }; dMin = d; if(d < 400 && Math.random() < 0.08) this.split(); }
+                let d = Math.hypot(n.x-on.x, n.y-on.y);
+                if(on.m > n.m * 1.2 && d < dThreat) { threat = on; dThreat = d; }
+                else if(n.m > on.m * 1.2 && d < dPrey) { prey = on; dPrey = d; }
             });
         });
-        return best;
+
+        if(threat) return { x: n.x - (threat.x - n.x), y: n.y - (threat.y - n.y) }; // Kaçış
+        if(prey) return { x: prey.x, y: prey.y }; // Avlama
+
+        // Hiçbiri yoksa en yakın yeme git
+        for(let i=0; i<foods.length; i+=10) { // Performans için 10'ar atla
+            let d = Math.hypot(n.x - foods[i].x, n.y - foods[i].y);
+            if(d < dFood) { food = foods[i]; dFood = d; }
+        }
+        return food ? { x: food.x, y: food.y } : { x: world.w/2, y: world.h/2 };
     }
 
     split() {
@@ -147,7 +147,7 @@ class Entity {
             if(n.m > 70 && this.nodes.length < 10) {
                 n.m /= 2; n.r = Math.sqrt(n.m)*11;
                 let a = this.isBot ? Math.random()*7 : Math.atan2(ms.y-H/2, ms.x-W/2);
-                ns.push({ x: n.x, y: n.y, m: n.m, r: n.r, vx: Math.cos(a)*32, vy: Math.sin(a)*32, sC: 220 });
+                ns.push({ x: n.x, y: n.y, m: n.m, r: n.r, vx: Math.cos(a)*30, vy: Math.sin(a)*30, sC: 200, boost:0, slow:0 });
             }
         });
         this.nodes.push(...ns);
@@ -177,30 +177,35 @@ function draw() {
 
     ctx.save(); ctx.translate(W/2, H/2); ctx.scale(cam.z, cam.z); ctx.translate(-cam.x, -cam.y);
 
-    // Kozmik Olaylar
-    cosmicEvents.forEach(e => {
-        ctx.beginPath(); ctx.fillStyle = e.type==='blackhole'?"#100020":"#fff";
-        ctx.shadowBlur = 25; ctx.shadowColor = e.type==='blackhole'?"#bc13fe":"#fff";
-        ctx.arc(e.x, e.y, e.r, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
-        if(e.type==='whitehole' && Math.random()<0.05) foods.push({x:e.x+(Math.random()-0.5)*150, y:e.y+(Math.random()-0.5)*150, c:CLRS[Math.floor(Math.random()*6)]});
+    // Anomaliler
+    anomalies.forEach(a => {
+        ctx.beginPath();
+        if(a.type === 'black') { ctx.fillStyle="#100020"; ctx.shadowBlur=20; ctx.shadowColor="#ff00ff"; }
+        if(a.type === 'white') { ctx.fillStyle="#fff"; ctx.shadowBlur=30; ctx.shadowColor="#fff"; 
+            if(Math.random()<0.1) foods.push({x:a.x+(Math.random()-0.5)*150, y:a.y+(Math.random()-0.5)*150, c:CLRS[Math.floor(Math.random()*5)]});
+        }
+        if(a.type === 'star') { ctx.fillStyle="#ffff00"; ctx.shadowBlur=15; ctx.shadowColor="#ffff00"; }
+        if(a.type === 'cold') { ctx.fillStyle="#0066ff"; ctx.shadowBlur=15; ctx.shadowColor="#0066ff"; }
+        if(a.type === 'bomb') { ctx.fillStyle="#ff3333"; ctx.shadowBlur=20; ctx.shadowColor="#ff3333"; }
+        ctx.arc(a.x, a.y, a.r, 0, 7); ctx.fill(); ctx.shadowBlur=0;
     });
 
-    // Azaltılmış Yemler
     foods.forEach((f, i) => {
         ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(f.x, f.y, 14, 0, 7); ctx.fill();
         players.forEach(p => p.nodes.forEach(n => {
-            if(Math.hypot(n.x-f.x, n.y-f.y) < n.r) { n.m += 1.8; n.r = Math.sqrt(n.m)*11; foods[i] = {x:Math.random()*world.w, y:Math.random()*world.h, c:CLRS[Math.floor(Math.random()*6)]}; }
+            if(Math.hypot(n.x-f.x, n.y-f.y) < n.r) { 
+                n.m += 2; n.r = Math.sqrt(n.m)*11; 
+                foods[i] = {x:Math.random()*world.w, y:Math.random()*world.h, c:CLRS[Math.floor(Math.random()*5)]}; 
+            }
         }));
     });
 
-    // Oyuncular ve Liderlik Listesi Hazırlama
-    let scores = [];
+    let scs = [];
     players.forEach((p) => {
-        let mass = p.update();
-        scores.push({ name: p.name, mass: mass });
+        let m = p.update(); scs.push({n:p.name, m:m});
         p.nodes.forEach((n) => {
             ctx.fillStyle = p.clr; ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, 7); ctx.fill();
-            ctx.fillStyle = "#fff"; ctx.font = (n.r/3) + "px Orbitron"; ctx.textAlign="center";
+            ctx.fillStyle = "#fff"; ctx.font = (n.r/3.5) + "px Orbitron"; ctx.textAlign="center";
             ctx.fillText(p.name, n.x, n.y + n.r/10);
 
             players.forEach(p2 => {
@@ -212,7 +217,7 @@ function draw() {
                         if(p2.nodes.length === 0) {
                             if(p2 === player) location.reload();
                             let idx = players.indexOf(p2);
-                            players[idx] = new Entity(NAMES[Math.floor(Math.random()*10)], CLRS[Math.floor(Math.random()*6)], Math.random()*world.w, Math.random()*world.h, true);
+                            players[idx] = new Entity(NAMES[Math.floor(Math.random()*8)], CLRS[Math.floor(Math.random()*5)], Math.random()*world.w, Math.random()*world.h, true);
                         }
                     }
                 });
@@ -229,28 +234,30 @@ function draw() {
     });
 
     ctx.restore();
-
-    // Sıralama Güncelle
-    scores.sort((a,b) => b.mass - a.mass);
-    document.getElementById('lbl').innerHTML = scores.slice(0,5).map((s, i) => `<div class="lb-item"><span>${i+1}. ${s.name}</span><span>${Math.floor(s.mass)}</span></div>`).join('');
-
+    scs.sort((a,b)=>b.m-a.m);
+    document.getElementById('lbl').innerHTML = scs.slice(0,5).map((s,i)=>`<div class="lb-i"><span>${i+1}. ${s.n}</span><span>${Math.floor(s.m)}</span></div>`).join('');
     requestAnimationFrame(draw);
 }
 
-// Kontroller
-window.addEventListener('keydown', e => { if(active && e.code==='Space') player.split(); if(active && e.code==='KeyW') player.feed(); });
+// MOBİL BUTONLAR
+document.getElementById('split').addEventListener('pointerdown', (e) => { e.preventDefault(); if(player) player.split(); });
+document.getElementById('feed').addEventListener('pointerdown', (e) => { e.preventDefault(); if(player) player.feed(); });
 window.addEventListener('pointermove', e => { ms.x = e.clientX; ms.y = e.clientY; });
-document.getElementById('split').addEventListener('pointerdown', e => { e.preventDefault(); if(player) player.split(); });
-document.getElementById('feed').addEventListener('pointerdown', e => { e.preventDefault(); if(player) player.feed(); });
 document.getElementById('exit').onclick = () => location.reload();
 
 document.getElementById('go').onclick = () => {
-    player = new Entity(document.getElementById('nk').value || "PİLOT", "#00f3ff", 4500, 4500, false);
+    player = new Entity(document.getElementById('nk').value || "PİLOT", "#00f3ff", 4000, 4000, false);
     players.push(player);
-    for(let i=0; i<35; i++) players.push(new Entity(NAMES[i%10], CLRS[Math.floor(Math.random()*6)], Math.random()*world.w, Math.random()*world.h, true));
-    for(let i=0; i<600; i++) foods.push({x:Math.random()*world.w, y:Math.random()*world.h, c:CLRS[Math.floor(Math.random()*6)]});
-    for(let i=0; i<6; i++) cosmicEvents.push({x:Math.random()*world.w, y:Math.random()*world.h, r:260, type:'blackhole'});
-    for(let i=0; i<4; i++) cosmicEvents.push({x:Math.random()*world.w, y:Math.random()*world.h, r:150, type:'whitehole'});
+    for(let i=0; i<35; i++) players.push(new Entity(NAMES[i%8], CLRS[Math.floor(Math.random()*5)], Math.random()*world.w, Math.random()*world.h, true));
+    for(let i=0; i<500; i++) foods.push({x:Math.random()*world.w, y:Math.random()*world.h, c:CLRS[Math.floor(Math.random()*5)]});
+    
+    // Anomali Oluşturma
+    for(let i=0; i<6; i++) anomalies.push({x:Math.random()*world.w, y:Math.random()*world.h, r:250, type:'black'});
+    for(let i=0; i<4; i++) anomalies.push({x:Math.random()*world.w, y:Math.random()*world.h, r:180, type:'white'});
+    for(let i=0; i<8; i++) anomalies.push({x:Math.random()*world.w, y:Math.random()*world.h, r:100, type:'star'});
+    for(let i=0; i<8; i++) anomalies.push({x:Math.random()*world.w, y:Math.random()*world.h, r:150, type:'cold'});
+    for(let i=0; i<6; i++) anomalies.push({x:Math.random()*world.w, y:Math.random()*world.h, r:80, type:'bomb'});
+
     document.getElementById('menu').style.display = 'none';
     document.getElementById('hud').style.display = 'block';
     active = true;
