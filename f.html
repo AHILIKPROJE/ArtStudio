@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Neon Hook | Competitive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050508;
+            --neon: #00f3ff;
+            --pink: #ff0055;
+            --green: #00ff99;
+            --surface: rgba(20, 20, 25, 0.95);
+        }
+
+        /* --- KRİTİK MOBİL AYARLARI --- */
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            outline: none;
+            margin: 0; padding: 0;
+        }
+
+        body, html {
+            width: 100%; height: 100%; overflow: hidden;
+            background: var(--bg); font-family: 'Inter', sans-serif;
+            touch-action: none; /* Kaydırmayı engeller */
+        }
+
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* --- ARAYÜZ KATMANI --- */
+        #hud {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 10;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 20px;
+        }
+
+        .header-row { display: flex; justify-content: space-between; align-items: flex-start; }
+        
+        .score-box {
+            text-align: left;
+        }
+        .score-lbl { font-size: 10px; color: #666; letter-spacing: 2px; font-weight: 900; }
+        .score-val { font-family: 'Syncopate'; font-size: 32px; color: var(--neon); text-shadow: 0 0 15px rgba(0,243,255,0.4); }
+
+        .exit-btn {
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff; padding: 10px 20px; border-radius: 8px;
+            font-family: 'Syncopate'; font-size: 10px; font-weight: 700;
+            cursor: pointer; transition: 0.2s;
+        }
+        .exit-btn:active { background: var(--pink); border-color: var(--pink); }
+
+        /* --- MENÜLER --- */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+            z-index: 100; display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(20px); transition: opacity 0.3s;
+        }
+        
+        .card {
+            width: 90%; max-width: 420px; background: var(--surface);
+            border: 1px solid rgba(255,255,255,0.1); border-top: 4px solid var(--neon);
+            border-radius: 30px; padding: 40px 30px; text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+
+        h1 { font-family: 'Syncopate'; color: var(--neon); font-size: 24px; margin-bottom: 10px; }
+        p { color: #888; font-size: 13px; line-height: 1.6; margin-bottom: 30px; }
+        
+        .action-btn {
+            width: 100%; padding: 20px; border-radius: 15px; border: none;
+            background: var(--neon); color: #000; font-family: 'Syncopate';
+            font-weight: 900; font-size: 14px; cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0, 243, 255, 0.3);
+            transition: transform 0.1s;
+        }
+        .action-btn:active { transform: scale(0.98); }
+
+        .tutorial {
+            display: flex; gap: 10px; justify-content: center; margin-bottom: 25px;
+        }
+        .key {
+            background: #222; border: 1px solid #444; color: #fff;
+            padding: 8px 12px; border-radius: 6px; font-size: 10px; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div id="hud">
+    <div class="header-row">
+        <div class="score-box">
+            <div class="score-lbl">MESAFE</div>
+            <div id="ui-score" class="score-val">0</div>
+        </div>
+        <button class="exit-btn" onclick="window.location.href='index.html'">AYRIL</button>
+    </div>
+    <div class="score-box">
+        <div class="score-lbl">REKOR</div>
+        <div id="ui-best" class="score-val" style="font-size: 20px; color: var(--pink);">0</div>
+    </div>
+</div>
+
+<div id="start-screen" class="modal-overlay">
+    <div class="card">
+        <h1>NEON HOOK</h1>
+        <div class="tutorial">
+            <span class="key">SPACE</span>
+            <span class="key">MOUSE</span>
+            <span class="key">DOKUNMA</span>
+        </div>
+        <p>Aşağı düşersen bağlantı kopar.<br>En yakın enerji noktasına tutunmak için basılı tut.</p>
+        <button class="action-btn" id="btn-start">BAĞLANTIYI KUR</button>
+    </div>
+</div>
+
+<div id="end-screen" class="modal-overlay" style="display: none; opacity: 0;">
+    <div class="card">
+        <h1 style="color: var(--pink);">SİNYAL KOPTU</h1>
+        <p>Maksimum mesafe kaydedildi.</p>
+        <div id="final-score" style="font-family:'Syncopate'; font-size: 40px; color: #fff; margin: 20px 0;">0</div>
+        <button class="action-btn" id="btn-restart">YENİDEN DENE</button>
+    </div>
+</div>
+
+<canvas id="game-canvas"></canvas>
+
+<script>
+/**
+ * SOVEREIGN GAME ENGINE v12 - STABLE BUILD
+ * Features: Auto-Aim, Competitive Physics, Mobile Fixes
+ */
+
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d', { alpha: false }); // Optimizasyon
+
+// OYUN DURUM DEĞİŞKENLERİ
+let gameState = {
+    isRunning: false,
+    score: 0,
+    cameraX: 0,
+    bestScore: localStorage.getItem('neon_hook_best_v12') || 0
+};
+
+// OYUNCU FİZİĞİ
+let player = {
+    x: 0, y: 0,
+    vx: 0, vy: 0,
+    radius: 12,
+    gravity: 0.5,       // Yerçekimi kuvveti
+    friction: 0.99,     // Hava sürtünmesi
+    swingForce: 1.5,    // Kanca çekiş gücü
+    maxSpeed: 25,       // Maksimum hız limiti
+    dead: false,
+    hooked: false,
+    hookTarget: null,   // Tutunduğu nokta
+    hookLen: 0,         // İp uzunluğu
+    trail: []           // Arkasındaki iz
+};
+
+// DÜNYA NESNELERİ
+let world = {
+    anchors: [],
+    particles: []
+};
+
+// SES MOTORU (Basit Bip Sesleri)
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSound(type) {
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    if(type === 'hook') {
+        osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    } else if (type === 'die') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.5);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    }
+    
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (type==='die'?0.5:0.1));
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + (type==='die'?0.5:0.1));
+}
+
+// --- BAŞLATMA VE SIFIRLAMA ---
+function initGame() {
+    // Canvas Boyutlandırma
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Oyuncuyu Başlat (Hafif bir ivmeyle fırlat)
+    player.x = 100;
+    player.y = canvas.height / 2;
+    player.vx = 15; // Başlangıç hızı
+    player.vy = -5;
+    player.dead = false;
+    player.hooked = false;
+    player.trail = [];
+    
+    gameState.score = 0;
+    gameState.cameraX = 0;
+    document.getElementById('ui-best').innerText = gameState.bestScore;
+
+    // Dünyayı Temizle ve Oluştur
+    world.anchors = [];
+    world.particles = [];
+    
+    // İlk Platform (Güvenlik için)
+    world.anchors.push({ x: 100, y: 100 });
+    
+    // İleriye doğru noktalar oluştur
+    for(let i=1; i<20; i++) {
+        spawnAnchor(i * 300 + 200);
+    }
+}
+
+function spawnAnchor(xBase) {
+    // Rastgele yükseklikte noktalar (Çok aşağıda olmasın)
+    const yPos = 50 + Math.random() * (canvas.height * 0.5);
+    world.anchors.push({ x: xBase + Math.random()*100, y: yPos });
+}
+
+// --- GİRDİ YÖNETİMİ (AKILLI KİLİT) ---
+function tryHook() {
+    if(!gameState.isRunning || player.dead) return;
+
+    // En yakın noktayı bul
+    let closest = null;
+    let minDst = 1000; // Maksimum kanca menzili
+
+    world.anchors.forEach(p => {
+        // Ekrandaki (Kamera hesabı dahil) konuma göre mesafe
+        const dist = Math.hypot(p.x - player.x, p.y - player.y);
+        
+        // Sadece önümüzdeki veya çok az arkamızdaki noktalara atalım
+        if(dist < minDst && p.x > player.x - 100) {
+            minDst = dist;
+            closest = p;
+        }
+    });
+
+    if(closest) {
+        player.hooked = true;
+        player.hookTarget = closest;
+        // İp uzunluğu mevcut mesafeden biraz kısa olsun ki çeksin
+        player.hookLen = minDst * 0.9; 
+        playSound('hook');
+    }
+}
+
+function releaseHook() {
+    player.hooked = false;
+    player.hookTarget = null;
+}
+
+// Event Listeners (Mobil & PC)
+window.addEventListener('keydown', e => {
+    if(e.code === 'Space') { e.preventDefault(); tryHook(); }
+});
+window.addEventListener('keyup', e => {
+    if(e.code === 'Space') releaseHook();
+});
+
+// Mobil & Mouse (Prevent Default çok önemli)
+const handleStart = (e) => {
+    if(e.target.tagName === 'BUTTON') return; // Butonlara basılmasını engelleme
+    if(e.cancelable) e.preventDefault(); // Menü açılmasını engelle
+    tryHook();
+};
+const handleEnd = (e) => {
+    if(e.target.tagName === 'BUTTON') return;
+    releaseHook();
+};
+
+canvas.addEventListener('mousedown', handleStart);
+window.addEventListener('mouseup', handleEnd);
+canvas.addEventListener('touchstart', handleStart, { passive: false });
+canvas.addEventListener('touchend', handleEnd, { passive: false });
+// Sağ tık menüsünü kapat
+window.oncontextmenu = (e) => { e.preventDefault(); return false; };
+
+
+// --- OYUN DÖNGÜSÜ ---
+function update() {
+    if(!gameState.isRunning) return;
+
+    if(player.dead) return;
+
+    // Kanca Fiziği (Pendulum/Spring)
+    if(player.hooked && player.hookTarget) {
+        const dx = player.x - player.hookTarget.x;
+        const dy = player.y - player.hookTarget.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        if(dist > player.hookLen) {
+            const angle = Math.atan2(dy, dx);
+            // Merkeze doğru kuvvet uygula
+            player.vx -= Math.cos(angle) * player.swingForce;
+            player.vy -= Math.sin(angle) * player.swingForce;
+            
+            // Hızlanma efekti (Swing Boost)
+            player.vx += 0.1; 
+        }
+    }
+
+    // Temel Fizik
+    player.vy += player.gravity;
+    player.vx *= player.friction;
+    
+    // Hız Sınırı
+    player.vx = Math.min(Math.max(player.vx, -player.maxSpeed), player.maxSpeed);
+    player.vy = Math.min(Math.max(player.vy, -player.maxSpeed), player.maxSpeed);
+
+    player.x += player.vx;
+    player.y += player.vy;
+
+    // Kamera Takibi (Yumuşak Geçiş)
+    // Kamera oyuncunun biraz önünde dursun
+    let targetCamX = player.x - (canvas.width * 0.3);
+    gameState.cameraX += (targetCamX - gameState.cameraX) * 0.1;
+
+    // Trail (İz) Ekleme
+    if(gameState.score % 2 === 0) {
+        player.trail.push({x: player.x, y: player.y, age: 10});
+    }
+    // Trail Temizleme
+    for(let i=player.trail.length-1; i>=0; i--) {
+        player.trail[i].age -= 1;
+        if(player.trail[i].age <= 0) player.trail.splice(i, 1);
+    }
+
+    // Dünya Oluşturma (Sonsuz)
+    const lastAnchor = world.anchors[world.anchors.length - 1];
+    if(lastAnchor.x < player.x + canvas.width + 500) {
+        spawnAnchor(lastAnchor.x + 250 + Math.random()*150);
+    }
+    // Bellek Temizliği (Geride kalanları sil)
+    if(world.anchors.length > 50) world.anchors.shift();
+
+    // Skor
+    const currentScore = Math.floor(player.x / 10);
+    if(currentScore > gameState.score) gameState.score = currentScore;
+    document.getElementById('ui-score').innerText = gameState.score;
+
+    // ÖLÜM KONTROLÜ (Aşağı Düşme)
+    if(player.y > canvas.height + 50) {
+        die();
+    }
+}
+
+function die() {
+    player.dead = true;
+    gameState.isRunning = false;
+    playSound('die');
+
+    if(gameState.score > gameState.bestScore) {
+        gameState.bestScore = gameState.score;
+        localStorage.setItem('neon_hook_best_v12', gameState.bestScore);
+    }
+
+    document.getElementById('final-score').innerText = gameState.score;
+    const endScreen = document.getElementById('end-screen');
+    endScreen.style.display = 'flex';
+    // Fade in
+    setTimeout(() => endScreen.style.opacity = 1, 10);
+}
+
+function draw() {
+    // Arka planı temizle
+    ctx.fillStyle = '#050508';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Grid Efekti (Hız hissi için)
+    ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
+    ctx.lineWidth = 2;
+    const gridSize = 100;
+    const offsetX = Math.floor(gameState.cameraX) % gridSize;
+    for(let x = -offsetX; x < canvas.width; x += gridSize) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    }
+
+    // Kanca İpi
+    if(player.hooked && player.hookTarget) {
+        ctx.beginPath();
+        ctx.moveTo(player.x - gameState.cameraX, player.y);
+        ctx.lineTo(player.hookTarget.x - gameState.cameraX, player.hookTarget.y);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        // Neon Dış Çizgi
+        ctx.strokeStyle = varColor('--neon');
+        ctx.lineWidth = 6;
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+    }
+
+    // Enerji Noktaları (Anchors)
+    world.anchors.forEach(p => {
+        const screenX = p.x - gameState.cameraX;
+        // Sadece ekrandakileri çiz
+        if(screenX > -50 && screenX < canvas.width + 50) {
+            // Hedeflenen nokta ise parlasın
+            if(player.hookTarget === p) {
+                ctx.fillStyle = '#fff';
+                ctx.shadowBlur = 20; ctx.shadowColor = '#fff';
+            } else {
+                ctx.fillStyle = varColor('--neon');
+                ctx.shadowBlur = 10; ctx.shadowColor = varColor('--neon');
+            }
+            
+            ctx.beginPath();
+            ctx.arc(screenX, p.y, 6, 0, Math.PI*2);
+            ctx.fill();
+            ctx.shadowBlur = 0; // Reset
+        }
+    });
+
+    // Oyuncu İzi (Trail)
+    player.trail.forEach(t => {
+        const screenX = t.x - gameState.cameraX;
+        ctx.fillStyle = `rgba(255, 0, 100, ${t.age / 10})`;
+        ctx.beginPath();
+        ctx.arc(screenX, t.y, player.radius * (t.age/10), 0, Math.PI*2);
+        ctx.fill();
+    });
+
+    // Oyuncu
+    if(!player.dead) {
+        const pScreenX = player.x - gameState.cameraX;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(pScreenX, player.y, player.radius, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Oyuncu etrafında neon halka
+        ctx.strokeStyle = varColor('--pink');
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(pScreenX, player.y, player.radius + 4, 0, Math.PI*2);
+        ctx.stroke();
+    }
+
+    requestAnimationFrame(() => {
+        update();
+        draw();
+    });
+}
+
+// CSS değişkenini JS'ten okumak için yardımcı
+function varColor(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+// --- BUTON İŞLEMLERİ ---
+document.getElementById('btn-start').onclick = () => {
+    document.getElementById('start-screen').style.opacity = 0;
+    setTimeout(() => {
+        document.getElementById('start-screen').style.display = 'none';
+        gameState.isRunning = true;
+        initGame();
+        draw(); // Döngüyü başlat
+    }, 300);
+};
+
+document.getElementById('btn-restart').onclick = () => {
+    const endScreen = document.getElementById('end-screen');
+    endScreen.style.opacity = 0;
+    setTimeout(() => {
+        endScreen.style.display = 'none';
+        gameState.isRunning = true;
+        initGame();
+    }, 300);
+};
+
+// İlk açılış
+window.onload = () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    // Arkaplanı bir kez çiz
+    ctx.fillStyle = '#050508';
+    ctx.fillRect(0,0,canvas.width, canvas.height);
+};
+</script>
+</body>
+</html>
