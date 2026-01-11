@@ -2,174 +2,124 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Agar | Türkçe Operasyon</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Neon Agar | Elite Arena</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
     <style>
-        :root { --neon: #00f3ff; --magenta: #ff00ff; --gold: #ffff00; --bg: #010105; --red: #ff3333; }
+        :root { --neon: #00f3ff; --magenta: #ff00ff; --red: #ff3333; --bg: #010105; }
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; touch-action: none; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background: var(--bg); font-family: 'Orbitron', sans-serif; }
+        body { background: var(--bg); font-family: 'Orbitron', sans-serif; overflow: hidden; }
         canvas { display: block; }
 
-        /* ARAYÜZ KATMANLARI */
-        #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; display: none; }
-        .score-box { position: absolute; bottom: 30px; left: 30px; border-left: 5px solid var(--neon); padding-left: 15px; }
-        .score-num { color: #fff; font-size: 50px; font-weight: 900; text-shadow: 0 0 20px var(--neon); }
+        /* HUD */
+        #hud { position: fixed; inset: 0; pointer-events: none; display: none; z-index: 10; }
+        .stat { position: absolute; bottom: 20px; left: 20px; color: #fff; font-size: 18px; text-shadow: 0 0 5px var(--neon); }
         
-        /* AYRILMA BUTONU */
-        .exit-container { position: absolute; top: 25px; left: 25px; pointer-events: auto; }
-        #btn-exit { background: rgba(255, 51, 51, 0.15); border: 2px solid var(--red); color: var(--red); padding: 10px 20px; border-radius: 8px; font-family: 'Orbitron'; font-weight: 900; cursor: pointer; transition: 0.3s; font-size: 12px; }
-        #btn-exit:hover { background: var(--red); color: #fff; box-shadow: 0 0 20px var(--red); }
+        .leaderboard { 
+            position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.85); 
+            border: 1px solid var(--neon); padding: 12px; border-radius: 8px; min-width: 160px;
+        }
+        .lb-title { color: var(--neon); font-size: 12px; margin-bottom: 8px; text-align: center; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .lb-item { font-size: 11px; color: #fff; display: flex; justify-content: space-between; margin: 3px 0; }
+        
+        .u-btn { 
+            position: absolute; pointer-events: auto; background: rgba(0,0,0,0.7); 
+            border: 2px solid var(--neon); color: var(--neon); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 10px;
+        }
+        #exit { top: 15px; left: 15px; width: 80px; height: 35px; border-radius: 5px; border-color: var(--red); color: var(--red); }
+        #split { bottom: 20px; right: 20px; width: 85px; height: 85px; box-shadow: 0 0 15px var(--neon); }
+        #feed { bottom: 20px; right: 120px; width: 85px; height: 85px; border-color: var(--magenta); color: var(--magenta); }
 
-        .leaderboard { position: absolute; top: 25px; right: 25px; background: rgba(0,0,0,0.9); border: 1px solid #222; padding: 15px; width: 220px; border-radius: 12px; color: #fff; }
-        .lb-title { color: var(--neon); font-size: 12px; text-align: center; margin-bottom: 10px; font-weight: 900; letter-spacing: 2px; }
-        .lb-row { display: flex; justify-content: space-between; font-size: 11px; margin: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-
-        /* AKTİF EFEKTLER */
-        #effects { position: absolute; top: 25px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
-        .effect-icon { width: 40px; height: 40px; border: 2px solid #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; opacity: 0.2; transition: 0.3s; background: rgba(0,0,0,0.5); }
-
-        /* KONTROLLER */
-        .controls { position: absolute; bottom: 30px; right: 30px; display: flex; gap: 15px; pointer-events: auto; }
-        .btn { width: 85px; height: 85px; border-radius: 50%; background: rgba(0,0,0,0.7); border: 2px solid var(--neon); color: var(--neon); font-family: 'Orbitron'; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; font-size: 12px; text-align: center; }
-        .btn:active { transform: scale(0.9); background: var(--neon); color: #000; }
-
-        /* GİRİŞ MENÜSÜ */
-        #menu { position: fixed; inset: 0; background: radial-gradient(circle, #0a0a20 0%, #000 100%); z-index: 100; display: flex; align-items: center; justify-content: center; }
-        .panel { background: rgba(5,5,15,0.95); border: 2px solid var(--neon); padding: 50px; border-radius: 30px; text-align: center; width: 95%; max-width: 450px; box-shadow: 0 0 100px rgba(0,243,255,0.2); }
-        input { background: #000; border: 1px solid #333; color: #fff; padding: 18px; width: 100%; border-radius: 12px; font-family: 'Orbitron'; margin-bottom: 25px; text-align: center; font-size: 18px; outline: none; }
-        input:focus { border-color: var(--neon); }
-        #start-btn { background: var(--neon); color: #000; padding: 20px; width: 100%; border: none; border-radius: 12px; font-weight: 900; font-size: 22px; cursor: pointer; transition: 0.3s; }
-        #start-btn:hover { box-shadow: 0 0 30px var(--neon); }
+        #menu { position: fixed; inset: 0; background: #000; z-index: 100; display: flex; align-items: center; justify-content: center; }
+        .pnl { text-align: center; border: 2px solid var(--neon); padding: 40px; border-radius: 20px; background: rgba(0,5,15,0.95); }
+        input { background: #000; border: 1px solid #333; color: #fff; padding: 15px; margin-bottom: 20px; width: 220px; text-align: center; font-family: 'Orbitron'; outline: none; }
+        button#go { background: var(--neon); color: #000; border: none; padding: 15px 40px; font-weight: 900; cursor: pointer; border-radius: 5px; letter-spacing: 2px; }
     </style>
 </head>
 <body>
 
 <div id="hud">
-    <div class="exit-container">
-        <button id="btn-exit">OYUNDAN AYRIL (ESC)</button>
-    </div>
-    <div id="effects">
-        <div id="fx-speed" class="effect-icon" title="HIZ" style="border-color: var(--gold)">⚡</div>
-        <div id="fx-shield" class="effect-icon" title="KALKAN" style="border-color: var(--neon)">🛡️</div>
-    </div>
-    <div class="score-box">
-        <div style="color: #444; font-size: 10px; letter-spacing: 2px;">TOPLAM KÜTLE</div>
-        <div class="score-num" id="score-val">0</div>
-    </div>
+    <div class="u-btn" id="exit">AYRIL</div>
+    <div class="stat">SKOR: <span id="mv">0</span></div>
     <div class="leaderboard">
         <div class="lb-title">SIRALAMA</div>
-        <div id="lb-list"></div>
+        <div id="lbl"></div>
     </div>
-    <div class="controls">
-        <div class="btn" id="btn-w" style="border-color: var(--magenta); color: var(--magenta);">BESLE<br>(W)</div>
-        <div class="btn" id="btn-space">AYRIL<br>(SPACE)</div>
-    </div>
+    <div class="u-btn" id="feed">W</div>
+    <div class="u-btn" id="split">SPACE</div>
 </div>
 
 <div id="menu">
-    <div class="panel">
-        <h1 style="color:var(--neon); font-size: 45px; margin-bottom: 10px;">NEON AGAR</h1>
-        <p style="color:#555; font-size: 10px; letter-spacing: 4px; margin-bottom: 30px;">TÜRKÇE OPERASYON MERKEZİ</p>
-        <input type="text" id="nick" placeholder="PİLOT ADI" maxlength="12" value="KOMUTAN">
-        <button id="start-btn">SAVAŞI BAŞLAT</button>
+    <div class="pnl">
+        <h1 style="color:var(--neon); margin-bottom: 25px; letter-spacing: 5px;">NEON ARENA</h1>
+        <input type="text" id="nk" value="KOMUTAN" maxlength="12"><br>
+        <button id="go">SAVAŞI BAŞLAT</button>
     </div>
 </div>
 
-<canvas id="game"></canvas>
+<canvas id="cv"></canvas>
 
 <script>
-/**
- * ANA MOTOR - TÜM SİSTEMLER KORUNUYOR
- */
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W, H, active = false, player = null;
+let world = { w: 9000, h: 9000 }, cam = { x: 4500, y: 4500, z: 0.5 }, ms = { x: 4500, y: 4500 };
+let players = [], foods = [], ejected = [], cosmicEvents = [];
 
-let W, H, gameActive = false, myPlayer = null, time = 0;
-let world = { w: 12000, h: 12000 };
-let cam = { x: 6000, y: 6000, z: 0.5 };
-let mouse = { x: 0, y: 0 };
+const CLRS = ["#00f3ff", "#ff00ff", "#00ff00", "#ffff00", "#ff3333", "#ffffff"];
+const NAMES = ["REİS", "KABUS", "CELLAT", "BARON", "AZRAİL", "GÖLGE", "VAMPİR", "AVCI", "ALFA", "ZALİM"];
 
-let players = [], foods = [], superFoods = [], particles = [], ejected = [];
-let powerups = [], vortices = [];
-
-const COLORS = ["#00f3ff", "#ff0055", "#bc13fe", "#00ff88", "#ffae00", "#ffffff", "#ff00ff", "#4dff00"];
-const BOT_NAMES = ["ANKA", "PARS", "GÖKTÜRK", "BOZKURT", "ASLAN", "HORTUM", "ŞİMŞEK", "EFES", "KARTAL", "SİMAV"];
-
-class Player {
-    constructor(id, name, color, x, y, isBot) {
-        this.id = id;
-        this.name = name;
-        this.color = color;
-        this.isBot = isBot;
-        this.nodes = [{ x, y, m: 20, r: 45, vx: 0, vy: 0, splitCool: 0 }];
-        this.shield = 0; 
-        this.speedBoost = 0;
-        this.emoji = "";
-        this.emojiTimer = 0;
+class Entity {
+    constructor(name, clr, x, y, isBot) {
+        this.name = name; this.clr = clr; this.isBot = isBot;
+        this.nodes = [{ x, y, m: 45, r: 52, vx: 0, vy: 0, sC: 0 }];
+        this.aiTarget = { x: Math.random()*world.w, y: Math.random()*world.h };
+        this.aiCooldown = 0;
     }
 
     update() {
         let totalMass = 0;
-        if(this.shield > 0) this.shield--;
-        if(this.speedBoost > 0) this.speedBoost--;
-
-        this.nodes.forEach((n, idx) => {
+        this.nodes.forEach((n, i) => {
             totalMass += n.m;
             let tx, ty;
-
             if (this.isBot) {
-                let target = this.getAIObjective(n);
-                if (target) {
-                    let ang = Math.atan2(target.y - n.y, target.x - n.x);
-                    if(target.type === 'threat') {
-                        tx = n.x - Math.cos(ang) * 400; ty = n.y - Math.sin(ang) * 400;
-                        if(Math.random() > 0.995) this.say("😱");
-                    } else {
-                        tx = target.x; ty = target.y;
-                    }
-                } else {
-                    tx = n.x + n.vx * 20; ty = n.y + n.vy * 20;
+                if(this.aiCooldown-- <= 0) {
+                    this.aiTarget = this.getSmartTarget(n);
+                    this.aiCooldown = 40 + Math.random()*40;
                 }
+                tx = this.aiTarget.x; ty = this.aiTarget.y;
             } else {
-                tx = cam.x + (mouse.x - W/2) / cam.z;
-                ty = cam.y + (mouse.y - H/2) / cam.z;
+                tx = cam.x + (ms.x - W/2)/cam.z; ty = cam.y + (ms.y - H/2)/cam.z;
             }
 
-            let angle = Math.atan2(ty - n.y, tx - n.x);
-            let baseSpeed = 1.3 * Math.pow(n.m, -0.16);
-            if(this.speedBoost > 0) baseSpeed *= 2.5;
-
-            n.vx += Math.cos(angle) * baseSpeed;
-            n.vy += Math.sin(angle) * baseSpeed;
+            let ang = Math.atan2(ty - n.y, tx - n.x);
+            // YENİ HIZ FORMÜLÜ: BÜYÜYÜNCE ÇOK YAVAŞLAMAZ
+            let speedFactor = 0.8 * Math.pow(n.m, -0.15); 
+            
+            n.vx += Math.cos(ang) * speedFactor; n.vy += Math.sin(ang) * speedFactor;
             n.vx *= 0.94; n.vy *= 0.94;
+            n.x += n.vx; n.y += n.vy;
 
-            vortices.forEach(v => {
-                let d = Math.hypot(n.x - v.x, n.y - v.y);
-                if(d < v.r * 2) {
-                    let f = (v.r * 2 - d) / 150;
-                    let a = Math.atan2(v.y - n.y, v.x - n.x);
-                    n.vx += Math.cos(a) * f; n.vy += Math.sin(a) * f;
-                }
+            // Sınırlar
+            n.x = Math.max(n.r, Math.min(world.w-n.r, n.x));
+            n.y = Math.max(n.r, Math.min(world.h-n.r, n.y));
+            if(n.sC > 0) n.sC--;
+
+            // Kozmik Olay Etkisi
+            cosmicEvents.forEach(e => {
+                if(e.type === 'blackhole' && Math.hypot(n.x-e.x, n.y-e.y) < e.r + n.r && n.m > 200) this.split();
             });
 
-            n.x += n.vx; n.y += n.vy;
-            n.x = Math.max(n.r, Math.min(world.w - n.r, n.x));
-            n.y = Math.max(n.r, Math.min(world.h - n.r, n.y));
-
-            if (n.splitCool > 0) n.splitCool--;
-
-            for (let j = idx + 1; j < this.nodes.length; j++) {
-                let other = this.nodes[j];
-                let d = Math.hypot(n.x - other.x, n.y - other.y);
-                if (d < n.r + other.r) {
-                    if (n.splitCool === 0 && other.splitCool === 0) {
-                        n.m += other.m; n.r = Math.sqrt(n.m) * 10.5;
-                        this.nodes.splice(j, 1); j--;
+            // Birleşme
+            for(let j=i+1; j<this.nodes.length; j++){
+                let o = this.nodes[j], d = Math.hypot(n.x-o.x, n.y-o.y);
+                if(d < n.r + o.r) {
+                    if(n.sC === 0 && o.sC === 0) {
+                        n.m += o.m; n.r = Math.sqrt(n.m)*11; this.nodes.splice(j,1); j--;
                     } else {
-                        let push = (n.r + other.r - d) * 0.2;
-                        let ang = Math.atan2(other.y - n.y, other.x - n.x);
-                        other.x += Math.cos(ang) * push; other.y += Math.sin(ang) * push;
+                        let f = (n.r+o.r-d)*0.12, a = Math.atan2(o.y-n.y, o.x-n.x);
+                        o.x += Math.cos(a)*f; o.y += Math.sin(a)*f;
                     }
                 }
             }
@@ -177,200 +127,92 @@ class Player {
         return totalMass;
     }
 
-    getAIObjective(n) {
-        let best = null, dMin = 1800;
+    getSmartTarget(n) {
+        let best = { x: Math.random()*world.w, y: Math.random()*world.h };
+        let dMin = 1200;
         players.forEach(p => {
-            if (p === this) return;
+            if(p === this) return;
             p.nodes.forEach(on => {
                 let d = Math.hypot(n.x - on.x, n.y - on.y);
-                if (on.m > n.m * 1.25 && d < 600 && p.shield === 0) {
-                    if (d < dMin) { dMin = d; best = {x: on.x, y: on.y, type: 'threat'}; }
-                } else if (n.m > on.m * 1.3 && d < 1000) {
-                    if (d < dMin) { dMin = d; best = {x: on.x, y: on.y, type: 'prey'}; }
-                }
+                if(on.m > n.m * 1.1 && d < 700) { best = { x: n.x - (on.x-n.x), y: n.y - (on.y-n.y) }; dMin = d; }
+                else if(n.m > on.m * 1.2 && d < dMin) { best = { x: on.x, y: on.y }; dMin = d; if(d < 400 && Math.random() < 0.08) this.split(); }
             });
-        });
-        if (best) return best;
-        powerups.forEach(p => {
-            let d = Math.hypot(n.x - p.x, n.y - p.y);
-            if (d < dMin) { dMin = d; best = {x: p.x, y: p.y, type: 'pu'}; }
-        });
-        superFoods.forEach(sf => {
-            let d = Math.hypot(n.x - sf.x, n.y - sf.y);
-            if (d < dMin) { dMin = d; best = {x: sf.x, y: sf.y, type: 'sf'}; }
         });
         return best;
     }
 
-    say(txt) { this.emoji = txt; this.emojiTimer = 120; }
-
     split() {
-        let news = [];
+        let ns = [];
         this.nodes.forEach(n => {
-            if (n.m > 55 && this.nodes.length < 16) {
-                n.m /= 2; n.r = Math.sqrt(n.m) * 10.5;
-                let ang = this.isBot ? Math.random()*6 : Math.atan2(mouse.y-H/2, mouse.x-W/2);
-                news.push({ x: n.x, y: n.y, r: n.r, m: n.m, vx: Math.cos(ang)*35, vy: Math.sin(ang)*35, splitCool: 600 });
-                createExplosion(n.x, n.y, this.color, 10);
-                if(!this.isBot) this.say("SALDIRI!");
+            if(n.m > 70 && this.nodes.length < 10) {
+                n.m /= 2; n.r = Math.sqrt(n.m)*11;
+                let a = this.isBot ? Math.random()*7 : Math.atan2(ms.y-H/2, ms.x-W/2);
+                ns.push({ x: n.x, y: n.y, m: n.m, r: n.r, vx: Math.cos(a)*32, vy: Math.sin(a)*32, sC: 220 });
             }
         });
-        this.nodes.push(...news);
+        this.nodes.push(...ns);
     }
 
-    eject() {
+    feed() {
         this.nodes.forEach(n => {
-            if (n.m > 35) {
-                n.m -= 15; n.r = Math.sqrt(n.m)*10.5;
-                let ang = Math.atan2(mouse.y-H/2, mouse.x-W/2);
-                ejected.push({ x: n.x+Math.cos(ang)*n.r, y: n.y+Math.sin(ang)*n.r, vx: Math.cos(ang)*22, vy: Math.sin(ang)*22, m: 12, c: this.color });
+            if(n.m > 50) {
+                n.m -= 18; n.r = Math.sqrt(n.m)*11;
+                let a = Math.atan2(ms.y-H/2, ms.x-W/2);
+                ejected.push({ x: n.x, y: n.y, vx: Math.cos(a)*25, vy: Math.sin(a)*25, m: 15, c: this.clr });
             }
         });
     }
 }
 
-// YENİ: ÇIKIŞ FONKSİYONU
-function quitGame() {
-    gameActive = false;
-    players = [];
-    foods = [];
-    superFoods = [];
-    particles = [];
-    ejected = [];
-    powerups = [];
-    vortices = [];
-    document.getElementById('hud').style.display = 'none';
-    document.getElementById('menu').style.display = 'flex';
-}
+function draw() {
+    ctx.fillStyle = "#010108"; ctx.fillRect(0,0,W,H);
+    if(!active) return requestAnimationFrame(draw);
 
-function createExplosion(x, y, color, count) {
-    for(let i=0; i<count; i++) {
-        particles.push({ x, y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 1, c: color, r: 3 + Math.random()*4 });
-    }
-}
-
-function spawnFood(num, isSuper = false) {
-    for(let i=0; i<num; i++) {
-        let f = {x: Math.random()*world.w, y: Math.random()*world.h, c: COLORS[Math.floor(Math.random()*COLORS.length)]};
-        if (isSuper) superFoods.push(f); else foods.push(f);
-    }
-}
-
-function spawnPowerUp() {
-    let types = ['SPEED', 'SHIELD'];
-    powerups.push({ x: Math.random()*world.w, y: Math.random()*world.h, type: types[Math.floor(Math.random()*2)], r: 50 });
-}
-
-function render() {
-    if(!gameActive && players.length === 0) return requestAnimationFrame(render);
-    time++;
-    ctx.fillStyle = "#010105";
-    ctx.fillRect(0, 0, W, H);
-
-    if (gameActive && myPlayer) {
-        let ax=0, ay=0, tr=0;
-        myPlayer.nodes.forEach(n => { ax+=n.x; ay+=n.y; tr+=n.r; });
-        cam.x += (ax/myPlayer.nodes.length - cam.x) * 0.1;
-        cam.y += (ay/myPlayer.nodes.length - cam.y) * 0.1;
-        cam.z += ( (0.42 / (1 + tr/850)) - cam.z) * 0.04;
-        document.getElementById('score-val').innerText = Math.floor(myPlayer.nodes.reduce((a,b)=>a+b.m,0));
-        document.getElementById('fx-speed').style.opacity = myPlayer.speedBoost > 0 ? "1" : "0.2";
-        document.getElementById('fx-shield').style.opacity = myPlayer.shield > 0 ? "1" : "0.2";
+    if(player) {
+        let ax=0, ay=0, am=0; player.nodes.forEach(n => { ax+=n.x; ay+=n.y; am+=n.m; });
+        cam.x += (ax/player.nodes.length - cam.x)*0.1;
+        cam.y += (ay/player.nodes.length - cam.y)*0.1;
+        document.getElementById('mv').innerText = Math.floor(am);
     }
 
-    ctx.save();
-    ctx.translate(W/2, H/2);
-    ctx.scale(cam.z, cam.z);
-    ctx.translate(-cam.x, -cam.y);
+    ctx.save(); ctx.translate(W/2, H/2); ctx.scale(cam.z, cam.z); ctx.translate(-cam.x, -cam.y);
 
-    // IZGARA
-    ctx.strokeStyle = "#08081a"; ctx.lineWidth = 5;
-    for(let x=0; x<=world.w; x+=400) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,world.h); ctx.stroke(); }
-    for(let y=0; y<=world.h; y+=400) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(world.w,y); ctx.stroke(); }
-
-    // KARADELİKLER
-    vortices.forEach(v => {
-        ctx.save();
-        ctx.translate(v.x, v.y);
-        ctx.rotate(time * 0.05);
-        let g = ctx.createRadialGradient(0,0,0,0,0,v.r);
-        g.addColorStop(0, '#000'); g.addColorStop(0.7, '#1a0033'); g.addColorStop(1, 'transparent');
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0,0,v.r,0,Math.PI*2); ctx.fill();
-        ctx.strokeStyle = "#bc13fe"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(0,0,v.r * Math.abs(Math.sin(time*0.02)), 0, Math.PI*2); ctx.stroke();
-        ctx.restore();
+    // Kozmik Olaylar
+    cosmicEvents.forEach(e => {
+        ctx.beginPath(); ctx.fillStyle = e.type==='blackhole'?"#100020":"#fff";
+        ctx.shadowBlur = 25; ctx.shadowColor = e.type==='blackhole'?"#bc13fe":"#fff";
+        ctx.arc(e.x, e.y, e.r, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+        if(e.type==='whitehole' && Math.random()<0.05) foods.push({x:e.x+(Math.random()-0.5)*150, y:e.y+(Math.random()-0.5)*150, c:CLRS[Math.floor(Math.random()*6)]});
     });
 
-    // ÖZEL GÜÇLER
-    powerups.forEach((p, i) => {
-        let c = p.type === 'SPEED' ? '#ffff00' : '#00f3ff';
-        ctx.strokeStyle = c; ctx.lineWidth = 4; ctx.shadowBlur = 20; ctx.shadowColor = c;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.stroke();
-        ctx.fillStyle = "#fff"; ctx.font = "30px Orbitron"; ctx.textAlign = "center";
-        ctx.fillText(p.type === 'SPEED' ? '⚡' : '🛡️', p.x, p.y + 10);
-        ctx.shadowBlur = 0;
-        players.forEach(pl => pl.nodes.forEach(n => {
-            if(Math.hypot(n.x-p.x, n.y-p.y) < n.r + p.r) {
-                if(p.type === 'SPEED') pl.speedBoost = 300; else pl.shield = 400;
-                powerups.splice(i, 1); setTimeout(spawnPowerUp, 10000);
-            }
-        }));
-    });
-
-    // YEMLER
+    // Azaltılmış Yemler
     foods.forEach((f, i) => {
-        ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(f.x, f.y, 14, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(f.x, f.y, 14, 0, 7); ctx.fill();
         players.forEach(p => p.nodes.forEach(n => {
-            if(Math.hypot(n.x-f.x, n.y-f.y) < n.r) { n.m += 2; n.r = Math.sqrt(n.m)*10.5; foods.splice(i,1); spawnFood(1); }
+            if(Math.hypot(n.x-f.x, n.y-f.y) < n.r) { n.m += 1.8; n.r = Math.sqrt(n.m)*11; foods[i] = {x:Math.random()*world.w, y:Math.random()*world.h, c:CLRS[Math.floor(Math.random()*6)]}; }
         }));
     });
 
-    // SÜPER YEMLER
-    superFoods.forEach((sf, i) => {
-        ctx.fillStyle = "#ff00ff"; ctx.shadowBlur = 25; ctx.shadowColor = "#ff00ff";
-        ctx.beginPath(); ctx.arc(sf.x, sf.y, 40, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
-        players.forEach(p => p.nodes.forEach(n => {
-            if(Math.hypot(n.x-sf.x, n.y-sf.y) < n.r + 20) { n.m += 40; n.r = Math.sqrt(n.m)*10.5; superFoods.splice(i,1); spawnFood(1, true); }
-        }));
-    });
-
-    // FIRLATILAN KÜTLELER
-    ejected.forEach((e, i) => {
-        e.x += e.vx; e.y += e.vy; e.vx *= 0.95; e.vy *= 0.95;
-        ctx.fillStyle = e.c; ctx.beginPath(); ctx.arc(e.x, e.y, 18, 0, Math.PI*2); ctx.fill();
-        players.forEach(p => p.nodes.forEach(n => {
-            if(Math.hypot(n.x-e.x, n.y-e.y) < n.r) { n.m += e.m; n.r = Math.sqrt(n.m)*10.5; ejected.splice(i,1); }
-        }));
-    });
-
-    // OYUNCULAR VE BOTLAR
-    players.forEach(p => {
-        p.update();
-        p.nodes.forEach(n => {
-            if(p.shield > 0) {
-                ctx.strokeStyle = "#00f3ff"; ctx.lineWidth = 5; ctx.beginPath();
-                ctx.arc(n.x, n.y, n.r + 10, 0, Math.PI*2); ctx.stroke();
-            }
-            ctx.fillStyle = p.color; ctx.shadowBlur = 15; ctx.shadowColor = p.color;
-            ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
-            ctx.fillStyle = "#fff"; ctx.font = `bold ${n.r/3}px Orbitron`; ctx.textAlign="center";
+    // Oyuncular ve Liderlik Listesi Hazırlama
+    let scores = [];
+    players.forEach((p) => {
+        let mass = p.update();
+        scores.push({ name: p.name, mass: mass });
+        p.nodes.forEach((n) => {
+            ctx.fillStyle = p.clr; ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, 7); ctx.fill();
+            ctx.fillStyle = "#fff"; ctx.font = (n.r/3) + "px Orbitron"; ctx.textAlign="center";
             ctx.fillText(p.name, n.x, n.y + n.r/10);
-            if(p.emojiTimer > 0) {
-                ctx.font = "40px Arial"; ctx.fillText(p.emoji, n.x, n.y - n.r - 20); p.emojiTimer--;
-            }
-            players.forEach(other => {
-                if (p === other) return;
-                other.nodes.forEach((on, oi) => {
-                    if (Math.hypot(n.x-on.x, n.y-on.y) < n.r - on.r/2.8 && n.m > on.m * 1.25 && other.shield === 0) {
-                        n.m += on.m; n.r = Math.sqrt(n.m)*10.5;
-                        p.say("😋"); createExplosion(on.x, on.y, other.color, 15);
-                        other.nodes.splice(oi, 1);
-                        if(other.nodes.length === 0) {
-                            if(other === myPlayer) { quitGame(); }
-                            else {
-                                players = players.filter(pl => pl !== other);
-                                players.push(new Player(other.id, BOT_NAMES[Math.floor(Math.random()*10)], COLORS[Math.floor(Math.random()*8)], Math.random()*world.w, Math.random()*world.h, true));
-                            }
+
+            players.forEach(p2 => {
+                if(p === p2) return;
+                p2.nodes.forEach((n2, ni2) => {
+                    let d = Math.hypot(n.x-n2.x, n.y-n2.y);
+                    if(d < n.r && n.m > n2.m * 1.25) {
+                        n.m += n2.m; n.r = Math.sqrt(n.m)*11; p2.nodes.splice(ni2, 1);
+                        if(p2.nodes.length === 0) {
+                            if(p2 === player) location.reload();
+                            let idx = players.indexOf(p2);
+                            players[idx] = new Entity(NAMES[Math.floor(Math.random()*10)], CLRS[Math.floor(Math.random()*6)], Math.random()*world.w, Math.random()*world.h, true);
                         }
                     }
                 });
@@ -378,48 +220,44 @@ function render() {
         });
     });
 
-    particles.forEach((p, i) => {
-        p.x += p.vx; p.y += p.vy; p.life -= 0.02;
-        if(p.life <= 0) particles.splice(i,1);
-        ctx.globalAlpha = p.life; ctx.fillStyle = p.c;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    ejected.forEach((e, i) => {
+        e.x += e.vx; e.y += e.vy; e.vx *= 0.92; e.vy *= 0.92;
+        ctx.fillStyle = e.c; ctx.beginPath(); ctx.arc(e.x, e.y, 18, 0, 7); ctx.fill();
+        players.forEach(p => p.nodes.forEach(n => {
+            if(Math.hypot(n.x-e.x, n.y-e.y) < n.r) { n.m += 12; n.r = Math.sqrt(n.m)*11; ejected.splice(i,1); }
+        }));
     });
-    ctx.globalAlpha = 1;
+
     ctx.restore();
 
-    if(time % 60 === 0) {
-        let sorted = [...players].sort((a,b) => b.nodes.reduce((s,n)=>s+n.m,0) - a.nodes.reduce((s,n)=>s+n.m,0)).slice(0,10);
-        document.getElementById('lb-list').innerHTML = sorted.map((s,i) => `<div class="lb-row ${s===myPlayer?'me':''}"><span>${i+1}. ${s.name}</span><span>${Math.floor(s.nodes.reduce((m,n)=>m+n.m,0))}</span></div>`).join('');
-    }
-    requestAnimationFrame(render);
+    // Sıralama Güncelle
+    scores.sort((a,b) => b.mass - a.mass);
+    document.getElementById('lbl').innerHTML = scores.slice(0,5).map((s, i) => `<div class="lb-item"><span>${i+1}. ${s.name}</span><span>${Math.floor(s.mass)}</span></div>`).join('');
+
+    requestAnimationFrame(draw);
 }
 
-window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
-window.addEventListener('keydown', e => {
-    if(!gameActive) return;
-    if(e.code === 'Space') myPlayer.split();
-    if(e.code === 'KeyW') myPlayer.eject();
-    if(e.code === 'Escape') quitGame(); // ESC tuşu ile çıkış
-});
-document.getElementById('btn-space').onclick = () => { if(gameActive) myPlayer.split(); };
-document.getElementById('btn-w').onclick = () => { if(gameActive) myPlayer.eject(); };
-document.getElementById('btn-exit').onclick = () => quitGame(); // Buton ile çıkış
+// Kontroller
+window.addEventListener('keydown', e => { if(active && e.code==='Space') player.split(); if(active && e.code==='KeyW') player.feed(); });
+window.addEventListener('pointermove', e => { ms.x = e.clientX; ms.y = e.clientY; });
+document.getElementById('split').addEventListener('pointerdown', e => { e.preventDefault(); if(player) player.split(); });
+document.getElementById('feed').addEventListener('pointerdown', e => { e.preventDefault(); if(player) player.feed(); });
+document.getElementById('exit').onclick = () => location.reload();
 
-document.getElementById('start-btn').onclick = () => {
-    let ad = document.getElementById('nick').value.toUpperCase() || "KOMUTAN";
-    myPlayer = new Player("ME", ad, "#00f3ff", 6000, 6000, false);
-    players.push(myPlayer);
-    for(let i=0; i<45; i++) players.push(new Player(i, BOT_NAMES[i%10], COLORS[Math.floor(Math.random()*8)], Math.random()*world.w, Math.random()*world.h, true));
-    for(let i=0; i<8; i++) vortices.push({ x: Math.random()*world.w, y: Math.random()*world.h, r: 250 + Math.random()*200 });
-    for(let i=0; i<15; i++) spawnPowerUp();
-    spawnFood(1500); spawnFood(60, true);
+document.getElementById('go').onclick = () => {
+    player = new Entity(document.getElementById('nk').value || "PİLOT", "#00f3ff", 4500, 4500, false);
+    players.push(player);
+    for(let i=0; i<35; i++) players.push(new Entity(NAMES[i%10], CLRS[Math.floor(Math.random()*6)], Math.random()*world.w, Math.random()*world.h, true));
+    for(let i=0; i<600; i++) foods.push({x:Math.random()*world.w, y:Math.random()*world.h, c:CLRS[Math.floor(Math.random()*6)]});
+    for(let i=0; i<6; i++) cosmicEvents.push({x:Math.random()*world.w, y:Math.random()*world.h, r:260, type:'blackhole'});
+    for(let i=0; i<4; i++) cosmicEvents.push({x:Math.random()*world.w, y:Math.random()*world.h, r:150, type:'whitehole'});
     document.getElementById('menu').style.display = 'none';
     document.getElementById('hud').style.display = 'block';
-    gameActive = true;
+    active = true;
 };
 
-W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight;
-render();
+const res = () => { cv.width = W = window.innerWidth; cv.height = H = window.innerHeight; };
+window.addEventListener('resize', res); res(); draw();
 </script>
 </body>
 </html>
