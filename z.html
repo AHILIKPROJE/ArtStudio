@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Slither - Gelişmiş Yılan Oyunu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        #gameCanvas {
+            display: block;
+            background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #0f0f1e 100%);
+            cursor: none;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+        }
+
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5), 0 2px 5px rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+        }
+
+        #leaderboard {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 16px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+            min-width: 200px;
+        }
+
+        #leaderboard h3 {
+            margin-bottom: 10px;
+            color: #ffd700;
+            text-align: center;
+            font-size: 20px;
+        }
+
+        .leaderboard-item {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: all;
+            z-index: 100;
+        }
+
+        #startScreen.hidden {
+            display: none;
+        }
+
+        #startScreen h1 {
+            color: #fff;
+            font-size: 72px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 20px #ff00ff, 0 0 40px #00ffff;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 20px #ff00ff, 0 0 40px #00ffff; }
+            to { text-shadow: 0 0 30px #00ffff, 0 0 60px #ff00ff; }
+        }
+
+        #nameInput {
+            padding: 15px 25px;
+            font-size: 20px;
+            border: 3px solid #ff00ff;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            margin-bottom: 20px;
+            text-align: center;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        #nameInput:focus {
+            border-color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        #startButton {
+            padding: 15px 50px;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            pointer-events: all;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        #startButton:hover {
+            transform: scale(1.1);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.6);
+        }
+
+        .controls {
+            color: white;
+            margin-top: 40px;
+            text-align: center;
+            font-size: 16px;
+            opacity: 0.7;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 40px 60px;
+            border-radius: 20px;
+            display: none;
+            pointer-events: all;
+            z-index: 99;
+        }
+
+        #gameOver.show {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        #restartButton {
+            margin-top: 20px;
+            padding: 12px 40px;
+            font-size: 20px;
+            color: white;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #restartButton:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(245, 87, 108, 0.5);
+        }
+
+        #minimap {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">
+        <div id="score">Skor: 0 | Uzunluk: 10</div>
+        <div id="leaderboard">
+            <h3>🏆 Lider Tablosu</h3>
+            <div id="leaderboardList"></div>
+        </div>
+        <canvas id="minimap"></canvas>
+        <div id="gameOver">
+            <div>Oyun Bitti!</div>
+            <div style="font-size: 24px; margin-top: 20px;">Final Skoru: <span id="finalScore">0</span></div>
+            <button id="restartButton">Tekrar Oyna</button>
+        </div>
+    </div>
+
+    <div id="startScreen">
+        <h1>🐍 SUPER SLITHER 🐍</h1>
+        <input type="text" id="nameInput" placeholder="Adını Gir" maxlength="15">
+        <button id="startButton">Oyuna Başla</button>
+        <div class="controls">
+            <p>🖱️ Fare ile yön kontrol et</p>
+            <p>🚀 Sol tık veya Space: Hızlan (enerji tüketir)</p>
+            <p>🎯 Parçaları topla ve büyü!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const minimap = document.getElementById('minimap');
+        const minimapCtx = minimap.getContext('2d');
+
+        // Canvas boyutlarını ayarla
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Oyun sabitleri
+        const WORLD_WIDTH = 4000;
+        const WORLD_HEIGHT = 4000;
+        const INITIAL_SNAKE_LENGTH = 10;
+        const FOOD_COUNT = 300;
+        const BOT_COUNT = 8;
+
+        // Oyun değişkenleri
+        let gameStarted = false;
+        let gameRunning = false;
+        let playerName = '';
+        let score = 0;
+        let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+        let camera = { x: 0, y: 0 };
+
+        // Yılan sınıfı
+        class Snake {
+            constructor(x, y, name, isPlayer = false) {
+                this.segments = [];
+                this.name = name;
+                this.isPlayer = isPlayer;
+                this.speed = 3;
+                this.angle = Math.random() * Math.PI * 2;
+                this.targetAngle = this.angle;
+                this.segmentRadius = 8;
+                this.boosting = false;
+                this.energy = 100;
+                
+                // Rastgele renkler
+                this.hue = Math.random() * 360;
+                this.colors = this.generateColors();
+                
+                // İlk pozisyon
+                for (let i = 0; i < INITIAL_SNAKE_LENGTH; i++) {
+                    this.segments.push({
+                        x: x - i * this.segmentRadius * 2,
+                        y: y,
+                        radius: this.segmentRadius + (i === 0 ? 4 : 0)
+                    });
+                }
+            }
+
+            generateColors() {
+                return [
+                    `hsl(${this.hue}, 100%, 50%)`,
+                    `hsl(${this.hue + 30}, 100%, 60%)`,
+                    `hsl(${this.hue + 60}, 100%, 55%)`
+                ];
+            }
+
+            update(targetX, targetY) {
+                if (!this.isPlayer) {
+                    // Bot için AI
+                    const nearestFood = this.findNearestFood();
+                    if (nearestFood) {
+                        targetX = nearestFood.x;
+                        targetY = nearestFood.y;
+                    }
+                    
+                    // Bazen rastgele yön değiştir
+                    if (Math.random() < 0.01) {
+                        this.targetAngle = Math.random() * Math.PI * 2;
+                    }
+                }
+
+                const head = this.segments[0];
+                const dx = targetX - head.x;
+                const dy = targetY - head.y;
+                this.targetAngle = Math.atan2(dy, dx);
+
+                // Yumuşak dönüş
+                let angleDiff = this.targetAngle - this.angle;
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                this.angle += angleDiff * 0.1;
+
+                // Hız ayarla
+                let currentSpeed = this.speed;
+                if (this.boosting && this.energy > 0) {
+                    currentSpeed = this.speed * 2;
+                    this.energy -= 1;
+                    // Boost sırasında segment bırak
+                    if (Math.random() < 0.3 && this.segments.length > 15) {
+                        const tail = this.segments[this.segments.length - 1];
+                        foods.push(new Food(tail.x, tail.y, 3));
+                        this.segments.pop();
+                    }
+                } else {
+                    this.energy = Math.min(100, this.energy + 0.3);
+                }
+
+                // Yeni baş pozisyonu
+                const newHead = {
+                    x: head.x + Math.cos(this.angle) * currentSpeed,
+                    y: head.y + Math.sin(this.angle) * currentSpeed,
+                    radius: this.segmentRadius + 4
+                };
+
+                // Dünya sınırları
+                newHead.x = Math.max(0, Math.min(WORLD_WIDTH, newHead.x));
+                newHead.y = Math.max(0, Math.min(WORLD_HEIGHT, newHead.y));
+
+                this.segments.unshift(newHead);
+
+                // Segment mesafelerini kontrol et
+                for (let i = 1; i < this.segments.length; i++) {
+                    const prev = this.segments[i - 1];
+                    const curr = this.segments[i];
+                    const dist = Math.hypot(prev.x - curr.x, prev.y - curr.y);
+                    const targetDist = this.segmentRadius * 1.8;
+                    
+                    if (dist > targetDist) {
+                        const angle = Math.atan2(prev.y - curr.y, prev.x - curr.x);
+                        curr.x = prev.x - Math.cos(angle) * targetDist;
+                        curr.y = prev.y - Math.sin(angle) * targetDist;
+                    }
+                }
+
+                // Fazla segmentleri kaldır
+                const maxLength = 20 + this.segments.length;
+                if (this.segments.length > maxLength) {
+                    this.segments = this.segments.slice(0, maxLength);
+                }
+            }
+
+            findNearestFood() {
+                const head = this.segments[0];
+                let nearest = null;
+                let minDist = Infinity;
+
+                for (const food of foods) {
+                    const dist = Math.hypot(food.x - head.x, food.y - head.y);
+                    if (dist < minDist && dist < 200) {
+                        minDist = dist;
+                        nearest = food;
+                    }
+                }
+
+                return nearest;
+            }
+
+            draw(ctx, offsetX, offsetY) {
+                // Gölge
+                ctx.shadowColor = this.colors[0];
+                ctx.shadowBlur = 15;
+
+                // Segmentleri çiz
+                for (let i = this.segments.length - 1; i >= 0; i--) {
+                    const segment = this.segments[i];
+                    const colorIndex = i % this.colors.length;
+                    
+                    ctx.beginPath();
+                    ctx.arc(
+                        segment.x - offsetX,
+                        segment.y - offsetY,
+                        segment.radius,
+                        0,
+                        Math.PI * 2
+                    );
+                    
+                    const gradient = ctx.createRadialGradient(
+                        segment.x - offsetX, segment.y - offsetY, 0,
+                        segment.x - offsetX, segment.y - offsetY, segment.radius
+                    );
+                    gradient.addColorStop(0, this.colors[colorIndex]);
+                    gradient.addColorStop(1, this.colors[(colorIndex + 1) % this.colors.length]);
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+                    
+                    // Parlama efekti
+                    if (i === 0 || i % 3 === 0) {
+                        ctx.beginPath();
+                        ctx.arc(
+                            segment.x - offsetX - segment.radius * 0.3,
+                            segment.y - offsetY - segment.radius * 0.3,
+                            segment.radius * 0.4,
+                            0,
+                            Math.PI * 2
+                        );
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                        ctx.fill();
+                    }
+                }
+
+                ctx.shadowBlur = 0;
+
+                // Baş için gözler
+                const head = this.segments[0];
+                const eyeAngle1 = this.angle + Math.PI / 6;
+                const eyeAngle2 = this.angle - Math.PI / 6;
+                const eyeDistance = head.radius * 0.6;
+
+                for (const eyeAngle of [eyeAngle1, eyeAngle2]) {
+                    const eyeX = head.x + Math.cos(eyeAngle) * eyeDistance - offsetX;
+                    const eyeY = head.y + Math.sin(eyeAngle) * eyeDistance - offsetY;
+                    
+                    // Göz beyazı
+                    ctx.beginPath();
+                    ctx.arc(eyeX, eyeY, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = 'white';
+                    ctx.fill();
+                    
+                    // Göz bebeği
+                    ctx.beginPath();
+                    ctx.arc(
+                        eyeX + Math.cos(this.angle) * 1,
+                        eyeY + Math.sin(this.angle) * 1,
+                        1.5,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.fillStyle = 'black';
+                    ctx.fill();
+                }
+
+                // İsim ve skor
+                if (this.isPlayer || Math.hypot(head.x - (offsetX + canvas.width / 2), head.y - (offsetY + canvas.height / 2)) < 300) {
+                    ctx.font = 'bold 14px Arial';
+                    ctx.fillStyle = 'white';
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 3;
+                    ctx.textAlign = 'center';
+                    const text = `${this.name} (${this.segments.length})`;
+                    ctx.strokeText(text, head.x - offsetX, head.y - offsetY - head.radius - 10);
+                    ctx.fillText(text, head.x - offsetX, head.y - offsetY - head.radius - 10);
+                }
+
+                // Enerji barı (boost)
+                if (this.isPlayer) {
+                    const barWidth = 100;
+                    const barHeight = 8;
+                    const barX = head.x - offsetX - barWidth / 2;
+                    const barY = head.y - offsetY + head.radius + 15;
+                    
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    ctx.fillRect(barX, barY, barWidth, barHeight);
+                    
+                    ctx.fillStyle = this.energy > 30 ? '#00ff00' : '#ff0000';
+                    ctx.fillRect(barX, barY, (this.energy / 100) * barWidth, barHeight);
+                }
+            }
+
+            checkCollision(other) {
+                const head = this.segments[0];
+                for (let i = 1; i < other.segments.length; i++) {
+                    const segment = other.segments[i];
+                    const dist = Math.hypot(head.x - segment.x, head.y - segment.y);
+                    if (dist < head.radius + segment.radius - 5) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            getScore() {
+                return this.segments.length;
+            }
+        }
+
+        // Yem sınıfı
+        class Food {
+            constructor(x, y, value = 1) {
+                this.x = x || Math.random() * WORLD_WIDTH;
+                this.y = y || Math.random() * WORLD_HEIGHT;
+                this.value = value;
+                this.radius = 4 + value * 2;
+                this.hue = Math.random() * 360;
+                this.pulsePhase = Math.random() * Math.PI * 2;
+            }
+
+            draw(ctx, offsetX, offsetY, time) {
+                const pulse = Math.sin(time * 0.005 + this.pulsePhase) * 0.3 + 1;
+                const displayRadius = this.radius * pulse;
+
+                ctx.shadowColor = `hsl(${this.hue}, 100%, 50%)`;
+                ctx.shadowBlur = 10;
+
+                ctx.beginPath();
+                ctx.arc(
+                    this.x - offsetX,
+                    this.y - offsetY,
+                    displayRadius,
+                    0,
+                    Math.PI * 2
+                );
+                
+                const gradient = ctx.createRadialGradient(
+                    this.x - offsetX, this.y - offsetY, 0,
+                    this.x - offsetX, this.y - offsetY, displayRadius
+                );
+                gradient.addColorStop(0, `hsl(${this.hue}, 100%, 70%)`);
+                gradient.addColorStop(1, `hsl(${this.hue}, 100%, 40%)`);
+                
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // Oyun nesneleri
+        let player;
+        let bots = [];
+        let foods = [];
+        let particles = [];
+
+        // Parçacık efekti
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.life = 1;
+                this.color = color;
+                this.radius = Math.random() * 3 + 2;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.02;
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+            }
+
+            draw(ctx, offsetX, offsetY) {
+                ctx.globalAlpha = this.life;
+                ctx.beginPath();
+                ctx.arc(this.x - offsetX, this.y - offsetY, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // Yiyecek oluştur
+        function spawnFood() {
+            for (let i = foods.length; i < FOOD_COUNT; i++) {
+                foods.push(new Food());
+            }
+        }
+
+        // Bot oluştur
+        function spawnBots() {
+            const botNames = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta'];
+            for (let i = 0; i < BOT_COUNT; i++) {
+                const x = Math.random() * WORLD_WIDTH;
+                const y = Math.random() * WORLD_HEIGHT;
+                bots.push(new Snake(x, y, botNames[i], false));
+            }
+        }
+
+        // Oyunu başlat
+        function startGame() {
+            playerName = document.getElementById('nameInput').value || 'Oyuncu';
+            document.getElementById('startScreen').classList.add('hidden');
+            
+            const startX = WORLD_WIDTH / 2;
+            const startY = WORLD_HEIGHT / 2;
+            
+            player = new Snake(startX, startY, playerName, true);
+            bots = [];
+            foods = [];
+            particles = [];
+            score = 0;
+            
+            spawnBots();
+            spawnFood();
+            
+            gameStarted = true;
+            gameRunning = true;
+            gameLoop();
+        }
+
+        // Oyunu yeniden başlat
+        function restartGame() {
+            document.getElementById('gameOver').classList.remove('show');
+            document.getElementById('startScreen').classList.remove('hidden');
+            gameStarted = false;
+            gameRunning = false;
+        }
+
+        // Lider tablosunu güncelle
+        function updateLeaderboard() {
+            const allSnakes = [player, ...bots].sort((a, b) => b.getScore() - a.getScore()).slice(0, 10);
+            const leaderboardList = document.getElementById('leaderboardList');
+            
+            leaderboardList.innerHTML = allSnakes.map((snake, index) => {
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+                return `<div class="leaderboard-item">${medal} ${snake.name}: ${snake.getScore()}</div>`;
+            }).join('');
+        }
+
+        // Minimap çiz
+        function drawMinimap() {
+            const scale = minimap.width / WORLD_WIDTH;
+            minimapCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            minimapCtx.fillRect(0, 0, minimap.width, minimap.height);
+
+            // Oyuncu
+            minimapCtx.fillStyle = '#00ff00';
+            minimapCtx.fillRect(player.segments[0].x * scale - 2, player.segments[0].y * scale - 2, 4, 4);
+
+            // Botlar
+            minimapCtx.fillStyle = '#ff0000';
+            for (const bot of bots) {
+                minimapCtx.fillRect(bot.segments[0].x * scale - 1, bot.segments[0].y * scale - 1, 2, 2);
+            }
+
+            // Görüş alanı
+            minimapCtx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            minimapCtx.strokeRect(
+                camera.x * scale,
+                camera.y * scale,
+                canvas.width * scale,
+                canvas.height * scale
+            );
+        }
+
+        // Ana oyun döngüsü
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            // Temizle
+            ctx.fillStyle = 'rgba(26, 26, 46, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Grid çiz
+            const gridSize = 50;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let x = -camera.x % gridSize; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = -camera.y % gridSize; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // Oyuncu güncelle
+            const worldMouseX = mouse.x + camera.x;
+            const worldMouseY = mouse.y + camera.y;
+            player.update(worldMouseX, worldMouseY);
+
+            // Kamera oyuncuyu takip et
+            const head = player.segments[0];
+            camera.x = head.x - canvas.width / 2;
+            camera.y = head.y - canvas.height / 2;
+            camera.x = Math.max(0, Math.min(WORLD_WIDTH - canvas.width, camera.x));
+            camera.y = Math.max(0, Math.min(WORLD_HEIGHT - canvas.height, camera.y));
+
+            // Yiyecek toplama kontrolü
+            for (let i = foods.length - 1; i >= 0; i--) {
+                const food = foods[i];
+                const dist = Math.hypot(head.x - food.x, head.y - food.y);
+                
+                if (dist < head.radius + food.radius) {
+                    // Yem yenildi
+                    score += food.value * 10;
+                    for (let j = 0; j < food.value; j++) {
+                        player.segments.push({ ...player.segments[player.segments.length - 1] });
+                    }
+                    
+                    // Parçacık efekti
+                    for (let j = 0; j < 10; j++) {
+                        particles.push(new Particle(food.x, food.y, `hsl(${food.hue}, 100%, 50%)`));
+                    }
+                    
+                    foods.splice(i, 1);
+                }
+            }
+
+            // Botları güncelle
+            for (const bot of bots) {
+                bot.update(0, 0);
+                
+                // Bot yiyecek toplama
+                for (let i = foods.length - 1; i >= 0; i--) {
+                    const food = foods[i];
+                    const botHead = bot.segments[0];
+                    const dist = Math.hypot(botHead.x - food.x, botHead.y - food.y);
+                    
+                    if (dist < botHead.radius + food.radius) {
+                        for (let j = 0; j < food.value; j++) {
+                            bot.segments.push({ ...bot.segments[bot.segments.length - 1] });
+                        }
+                        foods.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+
+            // Çarpışma kontrolü
+            for (const bot of bots) {
+                if (player.checkCollision(bot)) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            // Yiyecekleri çiz
+            const time = Date.now();
+            for (const food of foods) {
+                food.draw(ctx, camera.x, camera.y, time);
+            }
+
+            // Botları çiz
+            for (const bot of bots) {
+                bot.draw(ctx, camera.x, camera.y);
+            }
+
+            // Oyuncuyu çiz
+            player.draw(ctx, camera.x, camera.y);
+
+            // Parçacıkları güncelle ve çiz
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw(ctx, camera.x, camera.y);
+                if (particles[i].life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            // Yiyecek ekle
+            spawnFood();
+
+            // UI güncelle
+            document.getElementById('score').textContent = `Skor: ${score} | Uzunluk: ${player.segments.length}`;
+            updateLeaderboard();
+            drawMinimap();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Oyun bitti
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').classList.add('show');
+        }
+
+        // Event listeners
+        canvas.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        canvas.addEventListener('mousedown', () => {
+            if (player) player.boosting = true;
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (player) player.boosting = false;
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && player) {
+                player.boosting = true;
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' && player) {
+                player.boosting = false;
+            }
+        });
+
+        document.getElementById('startButton').addEventListener('click', startGame);
+        document.getElementById('restartButton').addEventListener('click', restGame);
+
+        document.getElementById('nameInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') startGame();
+        });
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // İlk yükleme
+        document.getElementById('nameInput').focus();
+    </script>
+</body>
+</html>
